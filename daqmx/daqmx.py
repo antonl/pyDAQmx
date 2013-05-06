@@ -64,6 +64,8 @@ def _sys_tasks():
     else:
         return []
 
+# TODO: Shouldn't return Physical Channel. Instead work on making the correct 
+# channel type
 def _sys_global_chans():
     var = _get_system_attr(lib.DAQmx_Sys_GlobalChans)
 
@@ -86,6 +88,23 @@ def _get_device_attr(dev_name, attr, value=None):
             return value
     else: # Prebuffered
         res = lib.DAQmxGetDeviceAttribute(dev_name, attr, value)
+        
+    handle_error(res)
+    return value
+
+def _get_chan_attr(handle, name, attr, value=None):
+    if value is None:
+        buf_size = lib.DAQmxGetChanAttribute(handle, attr, ffi.NULL)
+
+        if buf_size == 0:
+            return None
+        else:
+            value = ffi.new('char []', buf_size)
+            res = lib.DAQmxGetChanAttribute(handle, attr, value, ffi.cast('int32', buf_size))
+            handle_error(res)
+            return value
+    else:
+        res = lib.DAQmxGetChanAttribute(handle, attr, value)
         
     handle_error(res)
     return value
@@ -174,7 +193,7 @@ class Task(object):
         if var is not None:
             # TODO: This isn't quite right. Should return Channel class with specific information
             # about the type of channel it is, not just the physical channels.
-            chan_names = [PhysicalChannel(x.strip()) for x in ffi.string(var).split(',')]
+            chan_names = [Channel.coerce(self._phandle[0], x.strip()) for x in ffi.string(var).split(',')]
         else:
             chan_names = []
 
@@ -267,8 +286,6 @@ class Channel(object):
     channel specific information -- range, terminal configuration, and custom scaling -- that formats 
     the data. To create virtual channels, use the DAQmx Create Virtual Channel function/VI or the DAQ Assistant
     '''
-
-
     def __init__(self, handle, pchannel, *args, **kwargs):
         self._handle = handle
         
@@ -293,6 +310,12 @@ class Channel(object):
         except AttributeError:
             self._name = self._pchannel.name
 
+    #TODO: make introspection of measurements easier.
+    # For now, just remember to capture the returned objects to use them
+    @classmethod
+    def coerce(cls, handle, pname):
+        return pname
+
     name = property(lambda self: self._name)
 
 class AnalogChannel(Channel):
@@ -301,10 +324,11 @@ class AnalogChannel(Channel):
         self._min_val = min_val
         self._max_val = max_val
         self._units = units
-        print 'Made AnalogChannel'
 
     min = property(lambda self: self._min_val)
     max = property(lambda self: self._max_val)
+
+    # TODO: Make units people friendly
     units = property(lambda self: self._units)
 
 
@@ -314,7 +338,6 @@ class AnalogInput(AnalogChannel):
 
         if isinstance(self._pchannel, PhysicalChannelInput) is False:
             raise RuntimeError('cannot create analog input from {}'.format(self._pchannel))
-        print 'Made AnalogInput'
 
 class AnalogInputVoltage(AnalogInput):
     def __init__(self, handle, pchannel, min_val, max_val, units, terminal_cfg=lib.DAQmx_Val_Cfg_Default,  
@@ -332,7 +355,6 @@ class AnalogInputVoltage(AnalogInput):
                 max_val, units, sname) 
 
         handle_error(res)
-        print 'Made AnalogInputVoltage'
 
     def __repr__(self):
         return 'AnalogInputVoltage(\'{}\')'.format(self._name)

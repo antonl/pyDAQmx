@@ -26,9 +26,8 @@ tmp = ifilter(lambda x: len(x)>0, [y.ai for y in s.devices])
 ai = []
 for i in tmp: ai += i
 #print ai 
-print ai[0]
 
 # use the first one
 print a.add_channel(AnalogInputVoltage, ai[0], 0, 10, Volts, name='my_test')
-
+print 'Task {}\'s channels: {}'.format(a.name, a.channels)
 
