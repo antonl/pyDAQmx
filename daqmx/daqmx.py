@@ -2,24 +2,22 @@ from itertools import dropwhile, ifilter
 import weakref
 
 from . import ffi, lib
-from .units import Volts, FromCustomScale
 
-__all__ = ['NIDAQmx', 'Device', 'Task', 'AnalogInputVoltage']
+__all__ = ['NIDAQmx', 'Device', 'Task', 'AnalogInputVoltage', 'SampleClock']
 
 def handle_error(res):
     if res == 0: return
     
     msg = ffi.new('char[2048]')
     
-    lib.DAQmxGetExtendedErrorInfo(msg, 2048)
+    lib.DAQmxGetErrorString(res, msg, 2048)
     py_s = ffi.string(msg)
-    
     del msg
     
     if res < 0:
-        raise RuntimeError(py_s)
+        raise RuntimeError(py_s + ' ({:d})'.format(res))
     elif res > 0:
-        raise RuntimeWarning(py_s)
+        raise RuntimeWarning(py_s + ' ({:d})'.format(res))
 
 def _get_system_attr(attr, value=None):
     if value is None:
@@ -155,7 +153,6 @@ class Device(object):
                 pout = self._channels.get(i, None) 
                 if pout is None: self._channels.update({i: PhysicalChannelOutput(i)})
 
-            print self._channels
             return [self._channels.get(i) for i in names_out]
         else: 
             return []
@@ -194,11 +191,19 @@ class Task(object):
         self._phandle = ffi.new('TaskHandle *')
         res = lib.DAQmxCreateTask(name, self._phandle)
         self._channels = {}
+        self._timing = None
         try:
             handle_error(res)
         except RuntimeError as e:
             self._handle = None
             raise e
+
+    def set_timing(self, timing, *args, **kwargs):
+        if issubclass(timing, SampleTiming):
+        	print 'Making Timing'
+        	self._timing = timing(self._phandle[0], *args, **kwargs)
+        else:
+        	NotImplementedError('do not understand that timing spec')
 
     def _get_name(self):
         return ffi.string(_get_task_attr(self._phandle[0], lib.DAQmx_Task_Name))
@@ -216,6 +221,12 @@ class Task(object):
 
         return chan_names
 
+    def start(self):
+        if self._timing is None:
+        	raise RuntimeWarning('task has no explicit timing. values may be inferred.')
+        res = lib.DAQmxStartTask(self._phandle[0])
+        handle_error(res)
+
     def stop(self):
         try:
             res = lib.DAQmxStopTask(self._phandle[0])
@@ -231,7 +242,7 @@ class Task(object):
             self._channels.update({inst.name: inst})
             return inst
         elif isinstance(chantype, PhysicalChannel):
-            raise Warning('you put the physical channel type first')
+            raise RuntimeWarning('you put the physical channel type first')
         elif isinstance(chantype, list):
             raise NotImplementedError('cannot create more than one channel at a time yet')
 
@@ -245,6 +256,7 @@ class Task(object):
 
     name = property(_get_name)
     channels = property(_get_channels)
+    timing = property(lambda self: self._timing)
 
 def _get_phys_channel_attr(name, attr, value=None):
     if value is None: # need to buffer the variable
@@ -309,8 +321,6 @@ class Channel(object):
     '''
     def __init__(self, handle, pchannel, *args, **kwargs):
         self._handle = handle
-        
-        #print repr(type(pchannel)), repr(handle)
 
         if isinstance(pchannel, PhysicalChannel):
         	self._pchannel = pchannel 
@@ -322,6 +332,7 @@ class Channel(object):
         	raise RuntimeError('cannot interpret pchannel type {}'.format(type(pchannel)))
 
         try:
+            #TODO: fix this to use get() perhaps?
             name = kwargs['name']
 
             if name != '':
@@ -330,12 +341,6 @@ class Channel(object):
                 self._name = self._pchannel.name
         except AttributeError:
             self._name = self._pchannel.name
-
-    #TODO: make introspection of measurements easier.
-    # For now, just remember to capture the returned objects to use them
-    @classmethod
-    def coerce(cls, handle, pname):
-        return pname
 
     name = property(lambda self: self._name)
 
@@ -360,8 +365,9 @@ class AnalogInput(AnalogChannel):
         if isinstance(self._pchannel, PhysicalChannelInput) is False:
             raise RuntimeError('cannot create analog input from {}'.format(self._pchannel))
 
+from .units import Volts
 class AnalogInputVoltage(AnalogInput):
-    def __init__(self, handle, pchannel, min_val, max_val, units, terminal_cfg=lib.DAQmx_Val_Cfg_Default,  
+    def __init__(self, handle, pchannel, min_val, max_val, units=Volts, terminal_cfg=lib.DAQmx_Val_Cfg_Default,  
             name=None, custom_scale_name=None):
 
         super(AnalogInputVoltage, self).__init__(handle, pchannel, min_val, max_val, units, 
@@ -401,4 +407,26 @@ class DigitalChannel(Channel):
 
 class DigitalInput(DigitalChannel):
     pass
+
+class SampleTiming(object):
+    def __init__(self, handle, *args, **kwargs):
+        self._handle = handle
+
+from .units import RisingEdge, FiniteSamples
+
+class SampleClock(SampleTiming):
+    def __init__(self, handle, rate, edge=RisingEdge, sample_mode=FiniteSamples, n_per_channel=128, source=None):
+        super(SampleClock, self).__init__(handle)
+        
+        self._source = source
+        self._rate = rate
+        self._edge = edge
+        self._sample_mode = sample_mode
+        self._n_per_channel = n_per_channel
+
+        # Use onboard clock as source
+        if source is None: source = ffi.NULL
+
+        res = lib.DAQmxCfgSampClkTiming(handle, source, rate, edge, sample_mode, n_per_channel)
+        handle_error(res)
 

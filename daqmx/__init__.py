@@ -4,6 +4,8 @@ ffi = FFI()
 ffi.cdef('''
 typedef unsigned long uInt32; 
 typedef signed long int32;
+typedef unsigned long long uInt64;
+
 typedef float float32;
 typedef double float64;
 
@@ -130,6 +132,19 @@ int32 DAQmxCreateAIVoltageChan (TaskHandle taskHandle, const char physicalChanne
 
 #define DAQmx_Val_Volts ... // Volts
 #define DAQmx_Val_FromCustomScale  ... // Units a custom scale specifies. Use customScaleName to specify a custom scale.
+
+
+
+//*** Value set Edge1 ***
+#define DAQmx_Val_Rising ... // Rising
+#define DAQmx_Val_Falling ... // Falling
+
+
+#define DAQmx_Val_FiniteSamps ... // Finite Samples
+#define DAQmx_Val_ContSamps ... // Continuous Samples
+#define DAQmx_Val_HWTimedSinglePoint ... // Hardware Timed Single Point
+
+int32 DAQmxCfgSampClkTiming (TaskHandle taskHandle, const char source[], float64 rate, int32 activeEdge, int32 sampleMode, uInt64 sampsPerChanToAcquire);
 ''');
 
 lib = ffi.verify('''

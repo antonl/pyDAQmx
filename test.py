@@ -1,4 +1,4 @@
-from daqmx import NIDAQmx, Task, AnalogInputVoltage
+from daqmx import NIDAQmx, Task, AnalogInputVoltage, SampleClock
 from daqmx.units import Volts
 from itertools import chain, ifilter
 
@@ -31,6 +31,13 @@ print 'Made {}'.format(x)
 print 'Task {}\'s channels: {}'.format(a.name, a.channels)
 
 print a.channel_by_name(x.name)
+del a
 
+a = Task('my_test')
+a.add_channel(AnalogInputVoltage, ai[0], 0, 2, Volts, name='photodiode_1')
+print a.name, a.channels
+a.set_timing(SampleClock, 2048, n_per_channel=2048*6) 
+
+a.start()
 
 
