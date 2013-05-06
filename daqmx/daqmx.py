@@ -2,12 +2,9 @@ from itertools import dropwhile, ifilter
 import weakref
 
 from . import ffi, lib
+from .units import Volts, FromCustomScale
 
-__all__ = ['NIDAQmx', 'Device', 'Task', 'AnalogInputVoltage', 'Volts', 'FromCustomScale']
-
-# Define units
-Volts = lib.DAQmx_Val_Volts
-FromCustomScale = lib.DAQmx_Val_FromCustomScale 
+__all__ = ['NIDAQmx', 'Device', 'Task', 'AnalogInputVoltage']
 
 def handle_error(res):
     if res == 0: return
@@ -130,31 +127,38 @@ def _get_task_attr(handle, attr, value=None):
 class Device(object):
     def __init__(self, name, *args, **kwargs):
         self._name = name
+        self._channels = {}
 
     name = property(lambda self: self._name)
-    #channels = property(lambda self: self._get_phys_channel_props())
     ai = property(lambda self: self._get_inputs())
     ao = property(lambda self: self._get_outputs())
 
     def _get_inputs(self):
         pchan_in = _get_device_attr(self._name, lib.DAQmx_Dev_AI_PhysicalChans)
-
+        
         if pchan_in is not None: 
-            names_in = [PhysicalChannelInput(x.strip()) for x in ffi.string(pchan_in).split(',')] 
-        else: 
-            names_in = []
+            names_in = [x.strip() for x in ffi.string(pchan_in).split(',')] 
+            for i in names_in:
+                pin = self._channels.get(i, None) 
+                if pin is None: self._channels.update({i: PhysicalChannelInput(i)})
 
-        return names_in
+            return [self._channels.get(i) for i in names_in]
+        else: 
+            return []
 
     def _get_outputs(self):
         pchan_out = _get_device_attr(self._name, lib.DAQmx_Dev_AO_PhysicalChans)
-
+        
         if pchan_out is not None: 
-            names_out = [PhysicalChannelOutput(x.strip()) for x in ffi.string(pchan_out).split(',')] 
-        else: 
-            names_out = []
+            names_out = [x.strip() for x in ffi.string(pchan_out).split(',')] 
+            for i in names_out:
+                pout = self._channels.get(i, None) 
+                if pout is None: self._channels.update({i: PhysicalChannelOutput(i)})
 
-        return names_out
+            print self._channels
+            return [self._channels.get(i) for i in names_out]
+        else: 
+            return []
     
     def __repr__(self):
         return 'Device(\'{}\', ain=\'{}\', aout=\'{}\')'.format(self.name, self.ai, self.ao) 
@@ -167,6 +171,18 @@ class NIDAQmx(object):
         else:
         	cls._instance = super(NIDAQmx, cls).__new__(cls, *args, **kargs)
         	return cls._instance
+
+    def inputs(self):
+        tmp = ifilter(lambda x: len(x)>0, [y.ai for y in _get_devices()])
+        ai = []
+        for i in tmp: ai += i
+        return ai
+    
+    def outputs(self):
+        tmp = ifilter(lambda x: len(x)>0, [y.ao for y in _get_devices()])
+        ao = []
+        for i in tmp: ai += i
+        return ao
 
     devices = property(lambda self: _get_devices())
     version = property(lambda self: 'NIDAQmx version {}.{}'.format(_maj_version(), _min_version())) 

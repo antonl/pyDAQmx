@@ -1,4 +1,5 @@
-from daqmx import NIDAQmx, Task, AnalogInputVoltage, Volts
+from daqmx import NIDAQmx, Task, AnalogInputVoltage
+from daqmx.units import Volts
 from itertools import chain, ifilter
 
 s = NIDAQmx()
@@ -21,14 +22,11 @@ del b, c
 
 print 'Making voltage channel'
 # Get all physical input channels
-tmp = ifilter(lambda x: len(x)>0, [y.ai for y in s.devices])
-
-ai = []
-for i in tmp: ai += i
-#print ai 
-
+ai = s.inputs()
 # use the first one
 x = a.add_channel(AnalogInputVoltage, ai[0], 0, 10, Volts, name='my_test')
+a.add_channel(AnalogInputVoltage, ai[1], 0, 10, Volts, name='my_test2')
+
 print 'Made {}'.format(x)
 print 'Task {}\'s channels: {}'.format(a.name, a.channels)
 
