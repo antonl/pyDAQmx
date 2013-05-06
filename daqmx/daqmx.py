@@ -275,7 +275,7 @@ class Channel(object):
         #print repr(type(pchannel)), repr(handle)
 
         if isinstance(pchannel, PhysicalChannel):
-        	self._pchannel = inp
+        	self._pchannel = pchannel 
         elif isinstance(pchannel, basestring):
             raise NotImplementedError('cannot create channel by name yet')
         elif isinstance(pchannel, list):
@@ -296,21 +296,21 @@ class Channel(object):
     name = property(lambda self: self._name)
 
 class AnalogChannel(Channel):
-    min = property(lambda self: self._min_val)
-    max = property(lambda self: self._max_val)
-    units = property(lambda self: self._units)
-
     def __init__(self, handle, pchannel, min_val, max_val, units, *args, **kwargs):
-        super(AnalogChannel, self).__init__(self, handle, pchannel, min_val, max_val, units, *args, **kwargs)
+        super(AnalogChannel, self).__init__(handle, pchannel, min_val, max_val, units, *args, **kwargs)
         self._min_val = min_val
         self._max_val = max_val
         self._units = units
         print 'Made AnalogChannel'
 
+    min = property(lambda self: self._min_val)
+    max = property(lambda self: self._max_val)
+    units = property(lambda self: self._units)
+
 
 class AnalogInput(AnalogChannel):
     def __init__(self, handle, pchannel, min_val, max_val, units, *args, **kwargs):
-        super(AnalogChannel, self).__init__(self, handle, pchannel, min_val, max_val, units, *args, **kwargs)
+        super(AnalogChannel, self).__init__(handle, pchannel, min_val, max_val, units, *args, **kwargs)
 
         if isinstance(self._pchannel, PhysicalChannelInput) is False:
             raise RuntimeError('cannot create analog input from {}'.format(self._pchannel))
@@ -320,16 +320,16 @@ class AnalogInputVoltage(AnalogInput):
     def __init__(self, handle, pchannel, min_val, max_val, units, terminal_cfg=lib.DAQmx_Val_Cfg_Default,  
             name=None, custom_scale_name=None):
 
-        super(AnalogInputVoltage, self).__init__(self, handle, pchannel, min_val, max_val, units, 
+        super(AnalogInputVoltage, self).__init__(handle, pchannel, min_val, max_val, units, 
                 terminal_cfg=terminal_cfg, name=name, custom_scale_name=custom_scale_name)
-
-        res = lib.DAQmxCreateAIVoltageChan(self._handle, pchannel.name, self._name, terminal_cfg, 
-                self.min, self.max, self.units, custom_scale_name) 
 
         if custom_scale_name is not None and units is FromCustomScale:
             sname = custom_scale_name
         else:
             sname = ffi.NULL
+
+        res = lib.DAQmxCreateAIVoltageChan(self._handle, pchannel.name, self._name, terminal_cfg, min_val,
+                max_val, units, sname) 
 
         handle_error(res)
         print 'Made AnalogInputVoltage'
