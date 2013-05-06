@@ -119,12 +119,12 @@ class Device(object):
         pchan_out = _get_device_attr(self._name, lib.DAQmx_Dev_AO_PhysicalChans)
         
         if pchan_in is not None: 
-            names_in = [AnalogInput(x.strip()) for x in ffi.string(pchan_in).split(',')] 
+            names_in = [PhysicalChannelInput(x.strip()) for x in ffi.string(pchan_in).split(',')] 
         else: 
             names_in = []
 
         if pchan_out is not None: 
-            names_out = [AnalogOutput(x.strip()) for x in ffi.string(pchan_out).split(',')] 
+            names_out = [PhysicalChannelOutput(x.strip()) for x in ffi.string(pchan_out).split(',')] 
         else: 
             names_out = []
             
@@ -153,7 +153,7 @@ class Task(object):
     def __init__(self, name):
         self._phandle = ffi.new('TaskHandle *')
         res = lib.DAQmxCreateTask(name, self._phandle)
-        
+
         try:
             handle_error(res)
         except RuntimeError as e:
@@ -167,6 +167,8 @@ class Task(object):
         var = _get_task_attr(self._phandle[0], lib.DAQmx_Task_Channels)
 
         if var is not None:
+            # TODO: This isn't quite right. Should return Channel class with specific information
+            # about the type of channel it is, not just the physical channels.
             chan_names = [PhysicalChannel(x.strip()) for x in ffi.string(var).split(',')]
         else:
             chan_names = []
@@ -180,8 +182,11 @@ class Task(object):
         except RuntimeWarning as e:
             print e
     
-    def add_channel(self, type=None):
-        pass
+    #XXX Not sure whether I should add the created channel to some inner set 
+    # to keep track of it? 
+    def add_channel(self, chantype):
+        if isinstance(chantype, Channel):
+        	return chantype(name='') 
 
     def __del__(self):
         if self._phandle:
@@ -211,23 +216,17 @@ def _get_phys_channel_attr(name, attr, value=None):
     handle_error(res)
     return value
 
+# TODO: rewrite documentation in own words. So far this was taken from the reference
 class PhysicalChannel(object):
-    #_term_cfgs = {lib.DAQmx_Val_Bit_TermCfg_RSE: 'RSE', lib.DAQmx_Val_Bit_TermCfg_NRSE: 'NRSE', 
-        # lib.DAQmx_Val_Bit_TermCfg_Diff: 'Diff', lib.DAQmx_Val_Bit_TermCfg_PseudoDIFF: 'PseudoDiff'}
-    
-    def __init__(self, name):
-        self._name = name
+    '''Represents a physical channel on in NI-DAQmx
 
-    name = property(lambda self: self._name)
+    A physical channel is a terminal or pin at which you can measure or generate an analog or digital 
+    signal. A single physical channel can include more than one terminal, as in the case of a differential 
+    analog input channel or a digital port of eight lines. Every physical channel on a device has a unique 
+    name (for instance, SC1Mod4/ai0, Dev2/ao5, and Dev6/ctr3) that follows the NI-DAQmx physical channel naming 
+    convention.
+    ''' 
 
-class AnalogInput(PhysicalChannel):
-    # TODO: if there exists some additional information upon init (or maybe even new) 
-    # create a subclass of AnalogInput that will contain the right additional properties
-    # for the type of channel created
-
-    def __repr__(self):
-        return 'AnalogInput(\'{}\')'.format(self._name)
-    
     '''
     def _get_TermCfgs(self):
         val = ffi.new('int32 *')
@@ -236,22 +235,68 @@ class AnalogInput(PhysicalChannel):
         #return super(AnalogInput, self)._term_cfgs[ai_cfg[0]]
     '''
 
+    #_term_cfgs = {lib.DAQmx_Val_Bit_TermCfg_RSE: 'RSE', lib.DAQmx_Val_Bit_TermCfg_NRSE: 'NRSE', 
+        # lib.DAQmx_Val_Bit_TermCfg_Diff: 'Diff', lib.DAQmx_Val_Bit_TermCfg_PseudoDIFF: 'PseudoDiff'}
+    
+    def __init__(self, name):
+        self._name = name
+    
+    name = property(lambda self: self._name)
+
+class PhysicalChannelInput(PhysicalChannel):
+    def __repr__(self): 
+        return 'PhysicalChannelInput(\'{}\')'.format(self._name)
+
+class PhysicalChannelOutput(PhysicalChannel):
+    def __repr__(self): 
+        return 'PhysicalChannelOutput(\'{}\')'.format(self._name)
+
+class Channel(object):
+    '''Represents a virtual channel in NI-DAQmx
+    
+    Virtual channels are software entities that encapsulate the physical channel along with other 
+    channel specific information -- range, terminal configuration, and custom scaling -- that formats 
+    the data. To create virtual channels, use the DAQmx Create Virtual Channel function/VI or the DAQ Assistant
+    '''
+    def __init__(self, inp, name=''):
+        if isinstance(inp, PhysicalChannel):
+        	self._pchannel = inp
+        elif isinstance(inp, basestring):
+            raise NotImplementedError('cannot create channel by name yet')
+
+        if name != '':
+            self._name = name
+        else:
+            # is this the right thing to do?
+        	self._name = self._pchannel.name
+
+    name = property(lambda self: self._name)
+
+class AnalogInput(Channel):
+    def __repr__(self):
+        return 'AnalogInput(\'{}\')'.format(self._name)
+    
+
 class AnalogInputVoltage(AnalogInput):
-    pass
+    def __repr__(self):
+        return 'AnalogInputVoltage(\'{}\')'.format(self._name)
 
 class AnalogInputVoltageRMS(AnalogInput):
-    pass
+    def __repr__(self):
+        return 'AnalogInputVoltageRMS(\'{}\')'.format(self._name)
 
-class AnalogOutput(PhysicalChannel):
+class AnalogOutput(Channel):
     def __repr__(self):
         return 'AnalogOutput(\'{}\')'.format(self._name)
 
 class AnalogOutputCurrent(AnalogOutput):
-    pass
+    def __repr__(self):
+        return 'AnalogOutputCurrent(\'{}\')'.format(self._name)
 
 class AnalogOutputVoltage(AnalogOutput):
-    pass
+    def __repr__(self):
+        return 'AnalogOutputVoltage(\'{}\')'.format(self._name)
 
-class DigitalInput(PhysicalChannel):
+class DigitalInput(Channel):
     pass
 
