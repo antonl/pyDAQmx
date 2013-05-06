@@ -1,4 +1,5 @@
 from itertools import dropwhile, ifilter
+import time
 import weakref
 
 from . import ffi, lib
@@ -17,7 +18,7 @@ def handle_error(res):
     if res < 0:
         raise RuntimeError(py_s + ' ({:d})'.format(res))
     elif res > 0:
-        raise RuntimeWarning(py_s + ' ({:d})'.format(res))
+        raise RuntimeWarning(py_s + ' ({:d}'.format(res))
 
 def _get_system_attr(attr, value=None):
     if value is None:
@@ -186,12 +187,20 @@ class NIDAQmx(object):
     tasks = property(lambda self: _sys_tasks())
     global_channels = property(lambda self: _sys_global_chans())
 
+from numpy import frombuffer, float64
+from ctypes import pythonapi
+from weakref import WeakKeyDictionary
+
+from .units import Auto, GroupByScanNumber
+
 class Task(object):
     def __init__(self, name):
         self._phandle = ffi.new('TaskHandle *')
         res = lib.DAQmxCreateTask(name, self._phandle)
         self._channels = {}
+        self._data = WeakKeyDictionary()
         self._timing = None
+
         try:
             handle_error(res)
         except RuntimeError as e:
@@ -250,13 +259,56 @@ class Task(object):
         if self._phandle:
             res = lib.DAQmxClearTask(self._phandle[0])
             handle_error(res)
-    
+
+    def _is_done(self):
+        val = ffi.new('bool32 *')
+        res = lib.DAQmxIsTaskDone(self._phandle[0], val)
+        handle_error(res)
+        return bool(val[0])
+
+    # TODO: handle read types by determining types of channels available and make those types of reads possible  
+    # TODO: add a nonblocking read?
+    def read_as(self, rtype='AnalogF64', *args, **kwargs):
+        if kwargs.get('blocking', False) is True or not kwargs.get('timeout'):
+            while not self.is_done:
+                time.sleep(0.1)
+
+        print 'Can read now!'
+
+        if rtype != 'AnalogF64': raise NotImplementedError('can only read analog data in floating point')
+        self._read_analog_f64(*args, **kwargs)
+
+    def _read_analog_f64(self, buf_size=2048, n_per_channel=Auto, timeout=None, fill_mode=GroupByScanNumber):
+        if timeout is None:
+        	timeout = 10. # Ten seconds is default
+
+        samples = ffi.new('float64 []', buf_size) 
+        count_read = ffi.new('int32 *')
+        
+        res = lib.DAQmxReadAnalogF64(self._phandle[0], n_per_channel, timeout, fill_mode, samples, buf_size, 
+                count_read, ffi.NULL)
+
+        handle_error(res)
+        return AnalogF64(samples, count_read[0])
+
     def channel_by_name(self, name):
         return self._channels.get(name, None)
 
     name = property(_get_name)
     channels = property(_get_channels)
     timing = property(lambda self: self._timing)
+    is_done = property(lambda self: self._is_done())
+
+class Data(object):
+    def __init__(self, samples, *args, **kwargs):
+        self._cbuf = samples
+
+class AnalogF64(Data):
+    def __init__(self, samples, count):
+        super(AnalogF64, self).__init__(samples, count)
+        self._data = frombuffer(ffi.buffer(self._cbuf), dtype=float64, count=count)
+
+    data = property(lambda self: self._data)
 
 def _get_phys_channel_attr(name, attr, value=None):
     if value is None: # need to buffer the variable
@@ -408,6 +460,8 @@ class DigitalChannel(Channel):
 class DigitalInput(DigitalChannel):
     pass
 
+# XXX There are properties that can adjust timing type. this will mean I need to create a new class
+# Maybe it is better to have one megaclass instead that handles all of these logistics? 
 class SampleTiming(object):
     def __init__(self, handle, *args, **kwargs):
         self._handle = handle

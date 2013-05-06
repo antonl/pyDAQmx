@@ -9,6 +9,8 @@ typedef unsigned long long uInt64;
 typedef float float32;
 typedef double float64;
 
+typedef uInt32             bool32;
+
 typedef uInt32             TaskHandle;
 typedef uInt32             CalHandle;
 
@@ -32,6 +34,8 @@ int32 DAQmxCreateTask (const char taskName[], TaskHandle *taskHandle);
 int32 DAQmxClearTask (TaskHandle taskHandle);
 int32 DAQmxStartTask (TaskHandle taskHandle);
 int32 DAQmxStopTask (TaskHandle taskHandle);
+int32 DAQmxIsTaskDone (TaskHandle taskHandle, bool32 *isTaskDone);
+
 int32 DAQmxGetTaskAttribute (TaskHandle taskHandle, int32 attribute, void *value, ...);
 
 int32 DAQmxGetErrorString (int32 errorCode, char errorString[], uInt32 bufferSize);
@@ -145,6 +149,22 @@ int32 DAQmxCreateAIVoltageChan (TaskHandle taskHandle, const char physicalChanne
 #define DAQmx_Val_HWTimedSinglePoint ... // Hardware Timed Single Point
 
 int32 DAQmxCfgSampClkTiming (TaskHandle taskHandle, const char source[], float64 rate, int32 activeEdge, int32 sampleMode, uInt64 sampsPerChanToAcquire);
+
+
+int32 DAQmxReadAnalogF64 (TaskHandle taskHandle, int32 numSampsPerChan, float64 timeout, bool32 fillMode, float64 readArray[], uInt32 arraySizeInSamps, int32 *sampsPerChanRead, bool32 *reserved);
+
+#define DAQmx_Val_WaitInfinitely ...
+
+//*** Value for the Number of Samples per Channel parameter of DAQmxReadAnalogF64, DAQmxReadBinaryI16, DAQmxReadBinaryU16,
+//    DAQmxReadBinaryI32, DAQmxReadBinaryU32, DAQmxReadDigitalU8, DAQmxReadDigitalU32,
+//    DAQmxReadDigitalLines, DAQmxReadCounterF64, DAQmxReadCounterU32 and DAQmxReadRaw ***
+#define DAQmx_Val_Auto ...
+
+//*** Values for the Fill Mode parameter of DAQmxReadAnalogF64, DAQmxReadBinaryI16, DAQmxReadBinaryU16, DAQmxReadBinaryI32, DAQmxReadBinaryU32,
+//    DAQmxReadDigitalU8, DAQmxReadDigitalU32, DAQmxReadDigitalLines ***
+//*** Values for the Data Layout parameter of DAQmxWriteAnalogF64, DAQmxWriteBinaryI16, DAQmxWriteDigitalU8, DAQmxWriteDigitalU32, DAQmxWriteDigitalLines ***
+#define DAQmx_Val_GroupByChannel ... // Group by Channel
+#define DAQmx_Val_GroupByScanNumber ... // Group by Scan Number
 ''');
 
 lib = ffi.verify('''

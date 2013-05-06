@@ -39,5 +39,6 @@ print a.name, a.channels
 a.set_timing(SampleClock, 2048, n_per_channel=2048*6) 
 
 a.start()
-
+print a.is_done
+a.read_as('AnalogF64')
 
