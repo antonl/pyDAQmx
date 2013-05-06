@@ -171,13 +171,13 @@ class NIDAQmx(object):
     devices = property(lambda self: _get_devices())
     version = property(lambda self: 'NIDAQmx version {}.{}'.format(_maj_version(), _min_version())) 
     tasks = property(lambda self: _sys_tasks())
-    channels = property(lambda self: _sys_global_chans())
+    global_channels = property(lambda self: _sys_global_chans())
 
 class Task(object):
     def __init__(self, name):
         self._phandle = ffi.new('TaskHandle *')
         res = lib.DAQmxCreateTask(name, self._phandle)
-
+        self._channels = {}
         try:
             handle_error(res)
         except RuntimeError as e:
@@ -191,9 +191,10 @@ class Task(object):
         var = _get_task_attr(self._phandle[0], lib.DAQmx_Task_Channels)
 
         if var is not None:
-            # TODO: This isn't quite right. Should return Channel class with specific information
-            # about the type of channel it is, not just the physical channels.
-            chan_names = [Channel.coerce(self._phandle[0], x.strip()) for x in ffi.string(var).split(',')]
+            try:
+                chan_names = [self._channels[x.strip()] for x in ffi.string(var).split(',')]
+            except KeyError:
+                raise NotImplementedError('externally added channel. cannot create channel from name')
         else:
             chan_names = []
 
@@ -210,7 +211,9 @@ class Task(object):
     # to keep track of it? 
     def add_channel(self, chantype, *args, **kwargs):
         if issubclass(chantype, Channel):
-        	return chantype(self._phandle[0], *args, **kwargs) 
+            inst = chantype(self._phandle[0], *args, **kwargs) 
+            self._channels.update({inst.name: inst})
+            return inst
         elif isinstance(chantype, PhysicalChannel):
             raise Warning('you put the physical channel type first')
         elif isinstance(chantype, list):
@@ -220,10 +223,12 @@ class Task(object):
         if self._phandle:
             res = lib.DAQmxClearTask(self._phandle[0])
             handle_error(res)
+    
+    def channel_by_name(self, name):
+        return self._channels.get(name, None)
 
     name = property(_get_name)
     channels = property(_get_channels)
-
 
 def _get_phys_channel_attr(name, attr, value=None):
     if value is None: # need to buffer the variable

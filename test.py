@@ -10,7 +10,7 @@ for d in s.devices:
     print '\tInputs  >> {}'.format(d.ai)
     print '\tOutputs >> {}'.format(d.ao)
 
-print 'Channels: {}'.format(s.channels)
+print 'Global channels: {}'.format(s.global_channels)
 
 print 'Tasks: {}'.format(s.tasks)
 a,b,c = (Task(x) for x in 'abc')
@@ -28,6 +28,11 @@ for i in tmp: ai += i
 #print ai 
 
 # use the first one
-print a.add_channel(AnalogInputVoltage, ai[0], 0, 10, Volts, name='my_test')
+x = a.add_channel(AnalogInputVoltage, ai[0], 0, 10, Volts, name='my_test')
+print 'Made {}'.format(x)
 print 'Task {}\'s channels: {}'.format(a.name, a.channels)
+
+print a.channel_by_name(x.name)
+
+
 
