@@ -3,7 +3,7 @@ import weakref
 
 from . import ffi, lib
 
-__all__ = ['NIDAQmx', 'Device', 'Task']
+__all__ = ['NIDAQmx', 'Device', 'Task', 'AnalogInputVoltage']
 
 def handle_error(res):
     if res == 0: return
@@ -184,9 +184,11 @@ class Task(object):
     
     #XXX Not sure whether I should add the created channel to some inner set 
     # to keep track of it? 
-    def add_channel(self, chantype):
+    def add_channel(self, chantype, pchannel, name=None, *args, **kwargs):
         if isinstance(chantype, Channel):
-        	return chantype(name='') 
+        	return chantype(handle, pchannel, name, *args, **kwargs) 
+        elif isinstance(chantype, list):
+            raise NotImplementedError('cannot create more than one channel at a time yet')
 
     def __del__(self):
         if self._phandle:
@@ -258,26 +260,53 @@ class Channel(object):
     channel specific information -- range, terminal configuration, and custom scaling -- that formats 
     the data. To create virtual channels, use the DAQmx Create Virtual Channel function/VI or the DAQ Assistant
     '''
-    def __init__(self, inp, name=''):
-        if isinstance(inp, PhysicalChannel):
-        	self._pchannel = inp
-        elif isinstance(inp, basestring):
-            raise NotImplementedError('cannot create channel by name yet')
-
-        if name != '':
-            self._name = name
-        else:
-            # is this the right thing to do?
-        	self._name = self._pchannel.name
 
     name = property(lambda self: self._name)
 
-class AnalogInput(Channel):
-    def __repr__(self):
-        return 'AnalogInput(\'{}\')'.format(self._name)
-    
+    def __init__(self, handle, pchannel, *args, **kwargs):
+        self._handle = handle
+
+        if isinstance(pchannel, PhysicalChannel):
+        	self._pchannel = inp
+        elif isinstance(pchannel, basestring):
+            raise NotImplementedError('cannot create channel by name yet')
+        elif isinstance(pchannel, list):
+            raise NotImplementedError('cannot create multiple channels at once yet')
+        else:
+        	raise RuntimeError('cannot interpret pchannel type, {}'.format(pchannel))
+
+        try:
+            name = kwargs['name']
+
+            if name != '':
+                self._name = name
+            else:
+                self._name = self._pchannel.name
+        except AttributeError:
+            self._name = self._pchannel.name
+
+class AnalogChannel(Channel):
+    min = property(lambda self: self._min_val)
+    max = property(lambda self: self._max_val)
+    units = property(lambda self: self._units)
+
+    def __init__(self, handle, pchannel, min_val, max_val, units, *args, **kwargs):
+        super(AnalogChannel, self).__init__(self, handle, pchannel, min_val, max_val, units, *args, **kwargs)
+        self._min_val = min_val
+        self._max_val = max_val
+        self._units = units
+
+class AnalogInput(AnalogChannel):
+    def __init__(self, handle, pchannel, min_val, max_val, units, *args, **kwargs):
+        super(AnalogChannel, self).__init__(self, handle, pchannel, min_val, max_val, units, *args, **kwargs)
+
+        if isinstance(self._pchannel, PhysicalChannelInput) is False:
+            raise RuntimeError('cannot create analog input from {}'.format(self._pchannel))
 
 class AnalogInputVoltage(AnalogInput):
+    def __init__(self, handle, pchannel, min_val, max_val, units, *args, **kwargs):
+        super(AnalogInputVoltage, self).__init__(self, handle, pchannel, min_val, max_val, units, *args, **kwargs)
+
     def __repr__(self):
         return 'AnalogInputVoltage(\'{}\')'.format(self._name)
 
