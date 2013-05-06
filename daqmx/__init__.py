@@ -4,6 +4,8 @@ ffi = FFI()
 ffi.cdef('''
 typedef unsigned long uInt32; 
 typedef signed long int32;
+typedef float float32;
+typedef double float64;
 
 typedef uInt32             TaskHandle;
 typedef uInt32             CalHandle;
@@ -121,6 +123,13 @@ int32 DAQmxGetDeviceAttribute (const char deviceName[], int32 attribute, void *v
 
 int32 DAQmxGetPhysicalChanAttribute (const char physicalChannel[], int32 attribute, void *value, ...);
 int32 DAQmxGetChanAttribute (TaskHandle taskHandle, const char channel[], int32 attribute, void *value, ...);
+
+int32 DAQmxCreateAIVoltageChan (TaskHandle taskHandle, const char physicalChannel[], const char nameToAssignToChannel[], int32 terminalConfig, float64 minVal, float64 maxVal, int32 units, const char customScaleName[]);
+
+#define DAQmx_Val_Cfg_Default ... // Default
+
+#define DAQmx_Val_Volts ... // Volts
+#define DAQmx_Val_FromCustomScale  ... // Units a custom scale specifies. Use customScaleName to specify a custom scale.
 ''');
 
 lib = ffi.verify('''

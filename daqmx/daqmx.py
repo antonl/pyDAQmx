@@ -3,7 +3,11 @@ import weakref
 
 from . import ffi, lib
 
-__all__ = ['NIDAQmx', 'Device', 'Task', 'AnalogInputVoltage']
+__all__ = ['NIDAQmx', 'Device', 'Task', 'AnalogInputVoltage', 'Volts', 'FromCustomScale']
+
+# Define units
+Volts = lib.DAQmx_Val_Volts
+FromCustomScale = lib.DAQmx_Val_FromCustomScale 
 
 def handle_error(res):
     if res == 0: return
@@ -68,9 +72,6 @@ def _sys_global_chans():
     else:
         return []
     
-def _make_task(name=''):
-        return Task(name)
-
 def _get_device_attr(dev_name, attr, value=None):
     if value is None: # need to buffer the variable
         buf_size = lib.DAQmxGetDeviceAttribute(dev_name, attr, ffi.NULL)
@@ -112,28 +113,32 @@ class Device(object):
         self._name = name
 
     name = property(lambda self: self._name)
-    channels = property(lambda self: self._get_phys_channel_props)
+    #channels = property(lambda self: self._get_phys_channel_props())
+    ai = property(lambda self: self._get_inputs())
+    ao = property(lambda self: self._get_outputs())
 
-    def _get_phys_channel_props(self):
+    def _get_inputs(self):
         pchan_in = _get_device_attr(self._name, lib.DAQmx_Dev_AI_PhysicalChans)
-        pchan_out = _get_device_attr(self._name, lib.DAQmx_Dev_AO_PhysicalChans)
-        
+
         if pchan_in is not None: 
             names_in = [PhysicalChannelInput(x.strip()) for x in ffi.string(pchan_in).split(',')] 
         else: 
             names_in = []
 
+        return names_in
+
+    def _get_outputs(self):
+        pchan_out = _get_device_attr(self._name, lib.DAQmx_Dev_AO_PhysicalChans)
+
         if pchan_out is not None: 
             names_out = [PhysicalChannelOutput(x.strip()) for x in ffi.string(pchan_out).split(',')] 
         else: 
             names_out = []
-            
-        return (names_in, names_out)
+
+        return names_out
     
     def __repr__(self):
-        #i,o = self._get_phys_channel_props(), 'thing'
-        i,o = self._get_phys_channel_props()
-        return 'Device(\'{}\', ain=\'{}\', aout=\'{}\')'.format(self._name, i, o) 
+        return 'Device(\'{}\', ain=\'{}\', aout=\'{}\')'.format(self.name, self.ai, self.ao) 
 
 class NIDAQmx(object):
     def __new__(cls, *args, **kargs):
@@ -184,9 +189,11 @@ class Task(object):
     
     #XXX Not sure whether I should add the created channel to some inner set 
     # to keep track of it? 
-    def add_channel(self, chantype, pchannel, name=None, *args, **kwargs):
-        if isinstance(chantype, Channel):
-        	return chantype(handle, pchannel, name, *args, **kwargs) 
+    def add_channel(self, chantype, *args, **kwargs):
+        if issubclass(chantype, Channel):
+        	return chantype(self._phandle[0], *args, **kwargs) 
+        elif isinstance(chantype, PhysicalChannel):
+            raise Warning('you put the physical channel type first')
         elif isinstance(chantype, list):
             raise NotImplementedError('cannot create more than one channel at a time yet')
 
@@ -261,10 +268,11 @@ class Channel(object):
     the data. To create virtual channels, use the DAQmx Create Virtual Channel function/VI or the DAQ Assistant
     '''
 
-    name = property(lambda self: self._name)
 
     def __init__(self, handle, pchannel, *args, **kwargs):
         self._handle = handle
+        
+        #print repr(type(pchannel)), repr(handle)
 
         if isinstance(pchannel, PhysicalChannel):
         	self._pchannel = inp
@@ -273,7 +281,7 @@ class Channel(object):
         elif isinstance(pchannel, list):
             raise NotImplementedError('cannot create multiple channels at once yet')
         else:
-        	raise RuntimeError('cannot interpret pchannel type, {}'.format(pchannel))
+        	raise RuntimeError('cannot interpret pchannel type {}'.format(type(pchannel)))
 
         try:
             name = kwargs['name']
@@ -285,6 +293,8 @@ class Channel(object):
         except AttributeError:
             self._name = self._pchannel.name
 
+    name = property(lambda self: self._name)
+
 class AnalogChannel(Channel):
     min = property(lambda self: self._min_val)
     max = property(lambda self: self._max_val)
@@ -295,6 +305,8 @@ class AnalogChannel(Channel):
         self._min_val = min_val
         self._max_val = max_val
         self._units = units
+        print 'Made AnalogChannel'
+
 
 class AnalogInput(AnalogChannel):
     def __init__(self, handle, pchannel, min_val, max_val, units, *args, **kwargs):
@@ -302,10 +314,25 @@ class AnalogInput(AnalogChannel):
 
         if isinstance(self._pchannel, PhysicalChannelInput) is False:
             raise RuntimeError('cannot create analog input from {}'.format(self._pchannel))
+        print 'Made AnalogInput'
 
 class AnalogInputVoltage(AnalogInput):
-    def __init__(self, handle, pchannel, min_val, max_val, units, *args, **kwargs):
-        super(AnalogInputVoltage, self).__init__(self, handle, pchannel, min_val, max_val, units, *args, **kwargs)
+    def __init__(self, handle, pchannel, min_val, max_val, units, terminal_cfg=lib.DAQmx_Val_Cfg_Default,  
+            name=None, custom_scale_name=None):
+
+        super(AnalogInputVoltage, self).__init__(self, handle, pchannel, min_val, max_val, units, 
+                terminal_cfg=terminal_cfg, name=name, custom_scale_name=custom_scale_name)
+
+        res = lib.DAQmxCreateAIVoltageChan(self._handle, pchannel.name, self._name, terminal_cfg, 
+                self.min, self.max, self.units, custom_scale_name) 
+
+        if custom_scale_name is not None and units is FromCustomScale:
+            sname = custom_scale_name
+        else:
+            sname = ffi.NULL
+
+        handle_error(res)
+        print 'Made AnalogInputVoltage'
 
     def __repr__(self):
         return 'AnalogInputVoltage(\'{}\')'.format(self._name)
@@ -314,7 +341,7 @@ class AnalogInputVoltageRMS(AnalogInput):
     def __repr__(self):
         return 'AnalogInputVoltageRMS(\'{}\')'.format(self._name)
 
-class AnalogOutput(Channel):
+class AnalogOutput(AnalogChannel):
     def __repr__(self):
         return 'AnalogOutput(\'{}\')'.format(self._name)
 
@@ -326,6 +353,9 @@ class AnalogOutputVoltage(AnalogOutput):
     def __repr__(self):
         return 'AnalogOutputVoltage(\'{}\')'.format(self._name)
 
-class DigitalInput(Channel):
+class DigitalChannel(Channel):
+    pass
+
+class DigitalInput(DigitalChannel):
     pass
 

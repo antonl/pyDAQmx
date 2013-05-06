@@ -1,14 +1,14 @@
-from daqmx import NIDAQmx, Task
+from daqmx import NIDAQmx, Task, AnalogInputVoltage, Volts
+from itertools import chain, ifilter
 
 s = NIDAQmx()
 print s.version
 
 print 'Devices:'
 for d in s.devices:
-    i,o = d._get_phys_channel_props()
     print '> Device {}'.format(d.name)
-    print '\tInputs  >> {}'.format(i)
-    print '\tOutputs >> {}'.format(o)
+    print '\tInputs  >> {}'.format(d.ai)
+    print '\tOutputs >> {}'.format(d.ao)
 
 print 'Channels: {}'.format(s.channels)
 
@@ -17,6 +17,18 @@ a,b,c = (Task(x) for x in 'abc')
 print 'Task names: ', a.name, b.name, c.name
 print 'Tasks: {}'.format(s.tasks)
 print 'Task channels: ', a.channels, b.channels, c.channels
-del a, b, c
-print 'Tasks: {}'.format(s.tasks)
+del b, c
+
+print 'Making voltage channel'
+# Get all physical input channels
+tmp = ifilter(lambda x: len(x)>0, [y.ai for y in s.devices])
+
+ai = []
+for i in tmp: ai += i
+#print ai 
+print ai[0]
+
+# use the first one
+print a.add_channel(AnalogInputVoltage, ai[0], 0, 10, Volts, name='my_test')
+
 
