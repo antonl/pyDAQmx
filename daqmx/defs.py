@@ -40,19 +40,24 @@ class SystemAttributes:
         'global_channels':lib.DAQmx_Sys_GlobalChans,
     }
 
+    attributes = attr_map.keys()
+
     @classmethod
     def get(cls, attr):
         if not isinstance(attr, basestring):
             raise TypeError('attr must be a string')
 
         if attr in cls.int_attrs:
+            # attribute is an integer, TODO: assume unsigned 32 bit?
+            attr = attr_map[attr]
+
             value = ffi.new('uInt32 *', 0)
             res = lib.DAQmxGetSystemInfoAttribute(attr, value)
             handle_error(res)
             return value[0]
-            
         elif attr in cls.str_attrs: 
             # attribute is a string, allocate buffer for it
+            attr = attr_map[attr]
             
             buf_size = lib.DAQmxGetSystemInfoAttribute(attr, ffi.NULL)
 
