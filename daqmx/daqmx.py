@@ -6,24 +6,6 @@ from . import ffi, lib
 
 __all__ = ['NIDAQmx', 'Device', 'Task', 'AnalogInputVoltage', 'SampleClock']
 
-def _get_device_attr(dev_name, attr, value=None):
-    if value is None: # need to buffer the variable
-        buf_size = lib.DAQmxGetDeviceAttribute(dev_name, attr, ffi.NULL)
-        #print 'need buffer of size ', buf_size
-
-        if buf_size == 0:
-            return None
-        else:
-            value = ffi.new('char []', buf_size)
-            res = lib.DAQmxGetDeviceAttribute(dev_name, attr, value, ffi.cast('int32', buf_size))
-            handle_error(res)
-            return value
-    else: # Prebuffered
-        res = lib.DAQmxGetDeviceAttribute(dev_name, attr, value)
-        
-    handle_error(res)
-    return value
-
 def _get_chan_attr(handle, name, attr, value=None):
     if value is None:
         buf_size = lib.DAQmxGetChanAttribute(handle, attr, ffi.NULL)
@@ -124,7 +106,6 @@ class NIDAQmx(object):
     global_channels = property(lambda self: _sys_global_chans())
 
 from numpy import frombuffer, float64
-from ctypes import pythonapi
 from weakref import WeakKeyDictionary
 
 from .units import Auto, GroupByScanNumber

@@ -75,3 +75,99 @@ class SystemAttributes:
     def __index__(cls, attr):
         return cls.get(attr)
 
+class DeviceAttributes:
+    '''enum class for querying device attributes. Requires device name
+
+    This class allows one to query device attributes. They can be accessed using the 
+    `get(name, attr)` class method, e.g.
+
+    >>> from pyDAQmx import SystemAttributes
+    >>> SystemAttributes['devices']
+    '''
+
+    int_attrs = []
+    str_attrs = []
+    
+    attr_map = {
+    }
+
+    attributes = attr_map.keys()
+
+    @classmethod
+    def get(cls, name, attr):
+        if not isinstance(attr, basestring):
+            raise TypeError('attr must be a string')
+
+        if not isinstance(name, basestring):
+            raise TypeError('name must be a string')
+
+        if attr in cls.int_attrs:
+            # attribute is an integer, TODO: assume unsigned 32 bit?
+            attr = attr_map[attr]
+
+            value = ffi.new('uInt32 *', 0)
+            res = lib.DAQmxGetDeviceAttribute(name, attr, value)
+            handle_error(res)
+            return value[0]
+        elif attr in cls.str_attrs: 
+            # attribute is a string, allocate buffer for it
+            attr = attr_map[attr]
+            
+            buf_size = lib.DAQmxGetDeviceAttribute(name, attr, ffi.NULL)
+
+            if buf_size == 0:
+                return None
+            else:
+                value = ffi.new('char []', buf_size)
+                res = lib.DAQmxGetDeviceAttribute(name, attr, value, ffi.cast('int32', buf_size))
+                handle_error(res)
+                return ffi.string(value)
+        else:
+            raise AttributeError('no device attribute {}'.format(attr))
+
+class TaskAttributes:
+    '''enum class for querying task attributes. Requires task handle
+
+    This class allows one to query task attributes. They can be accessed using the 
+    `get(handle, attr)` class method
+    '''
+
+    int_attrs = []
+    str_attrs = []
+    
+    attr_map = {
+    }
+
+    attributes = attr_map.keys()
+
+    @classmethod
+    def get(cls, handle, attr):
+        if not isinstance(attr, basestring):
+            raise TypeError('attr must be a string')
+
+        #if not isinstance(handle, ):
+        #    raise TypeError('name must be a string')
+
+        if attr in cls.int_attrs:
+            # attribute is an integer, TODO: assume unsigned 32 bit?
+            attr = attr_map[attr]
+
+            value = ffi.new('uInt32 *', 0)
+            buf_size = lib.DAQmxGetTaskAttribute(handle, attr, value)
+            handle_error(res)
+            return value[0]
+        elif attr in cls.str_attrs: 
+            # attribute is a string, allocate buffer for it
+            attr = attr_map[attr]
+            
+            buf_size = lib.DAQmxGetTaskAttribute(handle, attr, ffi.NULL)
+
+            if buf_size == 0:
+                return None
+            else:
+                value = ffi.new('char []', buf_size)
+                res = lib.DAQmxGetTaskAttribute(handle, attr, value, ffi.cast('int32', buf_size))
+                handle_error(res)
+                return ffi.string(value)
+        else:
+            raise AttributeError('no task attribute {}'.format(attr))
