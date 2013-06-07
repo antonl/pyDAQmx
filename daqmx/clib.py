@@ -1,7 +1,8 @@
 from cffi import FFI
 
-ffi = FFI()
-ffi.cdef('''
+
+# Typedefs 
+header_str = '''
 typedef unsigned long uInt32; 
 typedef signed long int32;
 typedef unsigned long long uInt64;
@@ -9,11 +10,14 @@ typedef unsigned long long uInt64;
 typedef float float32;
 typedef double float64;
 
-typedef uInt32             bool32;
+typedef uInt32 bool32;
 
-typedef uInt32             TaskHandle;
-typedef uInt32             CalHandle;
+typedef uInt32 TaskHandle;
+typedef uInt32 CalHandle;
+'''
 
+# System attributes and functions to read them
+header_str += '''
 #define DAQmx_Sys_GlobalChans           ... // Indicates an array that contains the names of all global channels saved on the system.
 #define DAQmx_Sys_Scales                ... // Indicates an array that contains the names of all custom scales saved on the system.
 #define DAQmx_Sys_Tasks                 ... // Indicates an array that contains the names of all tasks saved on the system.
@@ -21,6 +25,11 @@ typedef uInt32             CalHandle;
 #define DAQmx_Sys_NIDAQMajorVersion     ... // Indicates the major portion of the installed version of NI-DAQ, such as 7 for version 7.0.
 #define DAQmx_Sys_NIDAQMinorVersion     ... // Indicates the minor portion of the installed version of NI-DAQ, such as 0 for version 7.0.
 
+int32 DAQmxGetSystemInfoAttribute (int32 attribute, void *value, ...);
+'''
+
+# Task related functions and definitions
+header_str += '''
 #define DAQmx_Task_Name			... // Indicates the name of the task.
 #define DAQmx_Task_Channels		... // Indicates the names of all virtual channels in the task.
 #define DAQmx_Task_NumChans 		... // Indicates the number of virtual channels in the task.
@@ -28,7 +37,7 @@ typedef uInt32             CalHandle;
 #define DAQmx_Task_NumDevices		... // Indicates the number of devices in the task.
 #define DAQmx_Task_Complete		... // Indicates whether the task completed execution.
 
-int32 DAQmxGetSystemInfoAttribute (int32 attribute, void *value, ...);
+int32 DAQmxGetTaskAttribute (TaskHandle taskHandle, int32 attribute, void *value, ...);
 
 int32 DAQmxCreateTask (const char taskName[], TaskHandle *taskHandle);
 int32 DAQmxClearTask (TaskHandle taskHandle);
@@ -36,12 +45,26 @@ int32 DAQmxStartTask (TaskHandle taskHandle);
 int32 DAQmxStopTask (TaskHandle taskHandle);
 int32 DAQmxIsTaskDone (TaskHandle taskHandle, bool32 *isTaskDone);
 
-int32 DAQmxGetTaskAttribute (TaskHandle taskHandle, int32 attribute, void *value, ...);
+#define DAQmx_Val_Task_Start    ... // Start
+#define DAQmx_Val_Task_Stop     ... // Stop
+#define DAQmx_Val_Task_Verify   ... // Verify
+#define DAQmx_Val_Task_Commit   ... // Commit
+#define DAQmx_Val_Task_Reserve  ... // Reserve
+#define DAQmx_Val_Task_Unreserve ...// Unreserve
+#define DAQmx_Val_Task_Abort    ... // Abort
 
+int32 DAQmxTaskControl (TaskHandle taskHandle, int32 action);
+'''
+
+# Error handling
+header_str += '''
 int32 DAQmxGetErrorString (int32 errorCode, char errorString[], uInt32 bufferSize);
 int32 DAQmxGetExtendedErrorInfo (char errorString[], uInt32 bufferSize);
+'''
 
 
+# Misc
+header_str += '''
 #define DAQmx_PhysicalChan_AI_TermCfgs	... // Indicates the list of terminal configurations supported by the channel.
 #define DAQmx_PhysicalChan_AO_TermCfgs	... // Indicates the list of terminal configurations supported by the channel.
 #define DAQmx_PhysicalChan_AO_ManualControlEnable ... // Specifies if you can control the physical channel externally via a manual control located on the device. You cannot simultaneously control a channel manually and with NI-DAQmx.
@@ -165,9 +188,31 @@ int32 DAQmxReadAnalogF64 (TaskHandle taskHandle, int32 numSampsPerChan, float64 
 //*** Values for the Data Layout parameter of DAQmxWriteAnalogF64, DAQmxWriteBinaryI16, DAQmxWriteDigitalU8, DAQmxWriteDigitalU32, DAQmxWriteDigitalLines ***
 #define DAQmx_Val_GroupByChannel ... // Group by Channel
 #define DAQmx_Val_GroupByScanNumber ... // Group by Scan Number
-''');
+'''
 
-lib = ffi.verify('''
-#include "NIDAQmx.h"
-''', include_dirs=['C:\Program Files\National Instruments\NI-DAQ\DAQmx ANSI C Dev\include'], libraries=['NIDAQmx'], 
+ffi = FFI()
+ffi.cdef(header_str);
+
+lib = ffi.verify(' #include "NIDAQmx.h" ', include_dirs=['C:\Program Files\National Instruments\NI-DAQ\DAQmx ANSI C Dev\include'], libraries=['NIDAQmx'], 
 library_dirs=['C:\Program Files\National Instruments\NI-DAQ\DAQmx ANSI C Dev\lib\msvc'])
+
+def handle_error(res):
+    '''utility function for converting error code into exceptions
+
+    The convention for DAQmx is to return an error code for every operation.
+    This function checks the error code and converts that code to an exception 
+    with the message string as the body.
+    '''
+
+    if res == 0: return
+    
+    msg = ffi.new('char[2048]')
+    
+    lib.DAQmxGetErrorString(res, msg, 2048)
+    py_s = ffi.string(msg)
+    del msg
+    
+    if res < 0:
+        raise RuntimeError(py_s + ' ({:d})'.format(res))
+    elif res > 0:
+        raise RuntimeWarning(py_s + ' ({:d})'.format(res))

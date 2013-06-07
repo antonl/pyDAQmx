@@ -1,5 +1,6 @@
-from .clib import lib, ffi
-from .lowlevel import handle_error
+from .clib import lib, ffi, handle_error
+
+__all__ = ['TaskState', 'SystemAttributes', 'DeviceAttributes', 'TaskAttributes']
 
 class ChannelUnits:
     Volts = lib.DAQmx_Val_Volts
@@ -19,16 +20,25 @@ GroupByChannel = lib.DAQmx_Val_GroupByChannel
 GroupByScanNumber = lib.DAQmx_Val_GroupByScanNumber
 WaitInfinitely = lib.DAQmx_Val_WaitInfinitely
 
-class SystemAttributes:
+class TaskState:
+    '''task state enum class that contains values for passing to `control_task` function
+    '''
+
+    Start = lib.DAQmx_Val_Task_Start 
+    Stop = lib.DAQmx_Val_Task_Stop 
+    Verify = lib.DAQmx_Val_Task_Verify 
+    Commit = lib.DAQmx_Val_Task_Commit 
+    Reserve = lib.DAQmx_Val_Task_Reserve 
+    Unreserve = lib.DAQmx_Val_Task_Unreserve 
+    Abort = lib.DAQmx_Val_Task_Abort 
+
+class SystemAttributes(object):
     '''enum class for querying system attributes
 
     This class allows one to query system attributes. They can be accessed using the 
-    `get()` class method or the index operator, e.g.
-
-    >>> from pyDAQmx import SystemAttributes
-    >>> SystemAttributes['devices']
+    `get()` class method, e.g.
     '''
-
+    
     int_attrs = ['major_version', 'minor_version']
     str_attrs = ['devices', 'tasks', 'global_channels']
     
@@ -49,7 +59,7 @@ class SystemAttributes:
 
         if attr in cls.int_attrs:
             # attribute is an integer, TODO: assume unsigned 32 bit?
-            attr = attr_map[attr]
+            attr = cls.attr_map[attr]
 
             value = ffi.new('uInt32 *', 0)
             res = lib.DAQmxGetSystemInfoAttribute(attr, value)
@@ -57,7 +67,7 @@ class SystemAttributes:
             return value[0]
         elif attr in cls.str_attrs: 
             # attribute is a string, allocate buffer for it
-            attr = attr_map[attr]
+            attr = cls.attr_map[attr]
             
             buf_size = lib.DAQmxGetSystemInfoAttribute(attr, ffi.NULL)
 
@@ -71,18 +81,11 @@ class SystemAttributes:
         else:
             raise AttributeError('no system attribute {}'.format(attr))
 
-    @classmethod
-    def __index__(cls, attr):
-        return cls.get(attr)
-
-class DeviceAttributes:
+class DeviceAttributes(object):
     '''enum class for querying device attributes. Requires device name
 
     This class allows one to query device attributes. They can be accessed using the 
     `get(name, attr)` class method, e.g.
-
-    >>> from pyDAQmx import SystemAttributes
-    >>> SystemAttributes['devices']
     '''
 
     int_attrs = []
@@ -92,6 +95,8 @@ class DeviceAttributes:
     }
 
     attributes = attr_map.keys()
+    
+    __getitem__ = lambda cls: cls.get
 
     @classmethod
     def get(cls, name, attr):
@@ -125,7 +130,7 @@ class DeviceAttributes:
         else:
             raise AttributeError('no device attribute {}'.format(attr))
 
-class TaskAttributes:
+class TaskAttributes(object):
     '''enum class for querying task attributes. Requires task handle
 
     This class allows one to query task attributes. They can be accessed using the 
