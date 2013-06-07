@@ -90,13 +90,12 @@ class DeviceAttributes(object):
 
     int_attrs = []
     str_attrs = []
+    bool_attrs = []
     
     attr_map = {
     }
 
     attributes = attr_map.keys()
-    
-    __getitem__ = lambda cls: cls.get
 
     @classmethod
     def get(cls, name, attr):
@@ -108,7 +107,7 @@ class DeviceAttributes(object):
 
         if attr in cls.int_attrs:
             # attribute is an integer, TODO: assume unsigned 32 bit?
-            attr = attr_map[attr]
+            attr = cls.attr_map[attr]
 
             value = ffi.new('uInt32 *', 0)
             res = lib.DAQmxGetDeviceAttribute(name, attr, value)
@@ -116,11 +115,13 @@ class DeviceAttributes(object):
             return value[0]
         elif attr in cls.str_attrs: 
             # attribute is a string, allocate buffer for it
-            attr = attr_map[attr]
+            attr = cls.attr_map[attr]
             
             buf_size = lib.DAQmxGetDeviceAttribute(name, attr, ffi.NULL)
 
-            if buf_size == 0:
+            if buf_size < 0: # error condition
+                handle_error(buf_size)
+            elif buf_size == 0: # empty string
                 return None
             else:
                 value = ffi.new('char []', buf_size)
@@ -137,10 +138,17 @@ class TaskAttributes(object):
     `get(handle, attr)` class method
     '''
 
-    int_attrs = []
-    str_attrs = []
+    int_attrs = ['channel_count', 'device_count']
+    str_attrs = ['name', 'channels', 'devices']
+    bool_attrs = ['is_done']
     
     attr_map = {
+            'name': lib.DAQmx_Task_Name,
+            'channels': lib.DAQmx_Task_Channels,
+            'channel_count': lib.DAQmx_Task_NumChans,
+            'devices': lib.DAQmx_Task_Devices,
+            'device_count': lib.DAQmx_Task_NumDevices,
+            'is_done': lib.DAQmx_Task_Complete,
     }
 
     attributes = attr_map.keys()
@@ -155,19 +163,32 @@ class TaskAttributes(object):
 
         if attr in cls.int_attrs:
             # attribute is an integer, TODO: assume unsigned 32 bit?
-            attr = attr_map[attr]
+            attr = cls.attr_map[attr]
 
             value = ffi.new('uInt32 *', 0)
-            buf_size = lib.DAQmxGetTaskAttribute(handle, attr, value)
+            res = lib.DAQmxGetTaskAttribute(handle, attr, value)
             handle_error(res)
             return value[0]
+        elif attr in cls.bool_attrs:
+            attr = cls.attr_map[attr]
+
+            value = ffi.new('uInt32 *', 0)
+            res = lib.DAQmxGetTaskAttribute(handle, attr, value)
+            handle_error(res)
+            return bool(value[0])
         elif attr in cls.str_attrs: 
             # attribute is a string, allocate buffer for it
-            attr = attr_map[attr]
+            attr = cls.attr_map[attr]
             
             buf_size = lib.DAQmxGetTaskAttribute(handle, attr, ffi.NULL)
 
-            if buf_size == 0:
+            if buf_size < 0:
+                # it seems that NIDAQmx returns a negaitve number if the task doens't 
+                # exist anymore
+                handle_error(buf_size)
+                return None
+            elif buf_size == 0:
+                # There are no elements in the string list
                 return None
             else:
                 value = ffi.new('char []', buf_size)

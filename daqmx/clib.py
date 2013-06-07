@@ -32,9 +32,9 @@ int32 DAQmxGetSystemInfoAttribute (int32 attribute, void *value, ...);
 header_str += '''
 #define DAQmx_Task_Name			... // Indicates the name of the task.
 #define DAQmx_Task_Channels		... // Indicates the names of all virtual channels in the task.
-#define DAQmx_Task_NumChans 		... // Indicates the number of virtual channels in the task.
+#define DAQmx_Task_NumChans		... // Indicates the number of virtual channels in the task.
 #define DAQmx_Task_Devices		... // Indicates an array containing the names of all devices in the task.
-#define DAQmx_Task_NumDevices		... // Indicates the number of devices in the task.
+#define DAQmx_Task_NumDevices	... // Indicates the number of devices in the task.
 #define DAQmx_Task_Complete		... // Indicates whether the task completed execution.
 
 int32 DAQmxGetTaskAttribute (TaskHandle taskHandle, int32 attribute, void *value, ...);
