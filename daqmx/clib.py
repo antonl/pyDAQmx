@@ -197,22 +197,45 @@ header_str += '''
 #define DAQmx_Val_PseudoDiff ... // Psuedo differential
 '''
 
-# Misc
+# Trigger Usage Types
 header_str += '''
-int32 DAQmxGetChanAttribute (TaskHandle taskHandle, const char channel[], int32 attribute, void *value, ...);
+#define DAQmx_Val_Bit_TriggerUsageTypes_Advance ... // Device supports advance triggers
+#define DAQmx_Val_Bit_TriggerUsageTypes_Pause ... // Device supports pause triggers
+#define DAQmx_Val_Bit_TriggerUsageTypes_Reference ... // Device supports reference triggers
+#define DAQmx_Val_Bit_TriggerUsageTypes_Start ... // Device supports start triggers
+#define DAQmx_Val_Bit_TriggerUsageTypes_Handshake ... // Device supports handshake triggers
+#define DAQmx_Val_Bit_TriggerUsageTypes_ArmStart ... // Device supports arm start triggers
+'''
 
-int32 DAQmxCreateAIVoltageChan (TaskHandle taskHandle, const char physicalChannel[], const char nameToAssignToChannel[], int32 terminalConfig, float64 minVal, float64 maxVal, int32 units, const char customScaleName[]);
+# Coupling types
+header_str += '''
+#define DAQmx_Val_Bit_CouplingTypes_AC ... // Device supports AC coupling
+#define DAQmx_Val_Bit_CouplingTypes_DC ... // Device supports DC coupling
+#define DAQmx_Val_Bit_CouplingTypes_Ground ... // Device supports ground coupling
+#define DAQmx_Val_Bit_CouplingTypes_HFReject ... // Device supports High Frequency Reject coupling
+#define DAQmx_Val_Bit_CouplingTypes_LFReject ... // Device supports Low Frequency Reject coupling
+#define DAQmx_Val_Bit_CouplingTypes_NoiseReject ... // Device supports Noise Reject coupling
+'''
 
-//*** Value set Edge1 ***
+# Sampling Settings
+header_str += '''
+int32 DAQmxCfgSampClkTiming (TaskHandle taskHandle, const char source[], float64 rate, int32 activeEdge, int32 sampleMode, uInt64 sampsPerChanToAcquire);
+int32 DAQmxCfgImplicitTiming (TaskHandle taskHandle, int32 sampleMode, uInt64 sampsPerChanToAcquire);
+int32 DAQmxCfgChangeDetectionTiming (TaskHandle taskHandle, const char risingEdgeChan[], const char fallingEdgeChan[], int32 sampleMode, uInt64 sampsPerChan);
+
 #define DAQmx_Val_Rising ... // Rising
 #define DAQmx_Val_Falling ... // Falling
 
 #define DAQmx_Val_FiniteSamps ... // Finite Samples
 #define DAQmx_Val_ContSamps ... // Continuous Samples
 #define DAQmx_Val_HWTimedSinglePoint ... // Hardware Timed Single Point
+'''
 
-int32 DAQmxCfgSampClkTiming (TaskHandle taskHandle, const char source[], float64 rate, int32 activeEdge, int32 sampleMode, uInt64 sampsPerChanToAcquire);
+# Misc
+header_str += '''
+int32 DAQmxGetChanAttribute (TaskHandle taskHandle, const char channel[], int32 attribute, void *value, ...);
 
+int32 DAQmxCreateAIVoltageChan (TaskHandle taskHandle, const char physicalChannel[], const char nameToAssignToChannel[], int32 terminalConfig, float64 minVal, float64 maxVal, int32 units, const char customScaleName[]);
 
 int32 DAQmxReadAnalogF64 (TaskHandle taskHandle, int32 numSampsPerChan, float64 timeout, bool32 fillMode, float64 readArray[], uInt32 arraySizeInSamps, int32 *sampsPerChanRead, bool32 *reserved);
 

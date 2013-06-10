@@ -1,19 +1,28 @@
 from .clib import lib, ffi, handle_error
 
-__all__ = ['TaskState', 'SystemAttributes', 'TaskAttributes', 'TerminalConfig', 'Units']
+__all__ = ['TaskState', 'SystemAttributes', 'TaskAttributes', 'TerminalConfig', 'SampleMode', \
+    'Units', 'AnalogInputCouplings']
 
 class Units:
     Volts = lib.DAQmx_Val_Volts
     Amps = lib.DAQmx_Val_Amps
     FromCustomScale = lib.DAQmx_Val_FromCustomScale 
 
-class TriggerType:
-    RisingEdge = lib.DAQmx_Val_Rising
-    FallingEdge = lib.DAQmx_Val_Falling
+class AnalogInputCouplings:
+    AC = lib.DAQmx_Val_Bit_CouplingTypes_AC
+    DC = lib.DAQmx_Val_Bit_CouplingTypes_DC
+    Ground = lib.DAQmx_Val_Bit_CouplingTypes_Ground
+    LowPass = lib.DAQmx_Val_Bit_CouplingTypes_HFReject
+    HiPass = lib.DAQmx_Val_Bit_CouplingTypes_LFReject
+    NoiseReject = lib.DAQmx_Val_Bit_CouplingTypes_NoiseReject
 
-class Sampling:
-    FiniteSamples = lib.DAQmx_Val_FiniteSamps
-    ContinuousSamples = lib.DAQmx_Val_ContSamps
+class ActiveEdge:
+    Rising = lib.DAQmx_Val_Rising
+    Falling = lib.DAQmx_Val_Falling
+
+class SampleMode:
+    Finite = lib.DAQmx_Val_FiniteSamps
+    Continuous = lib.DAQmx_Val_ContSamps
     HWTimedSinglePoint = lib.DAQmx_Val_HWTimedSinglePoint
 
 class TerminalConfig:
@@ -178,30 +187,144 @@ class DeviceAttributes(object):
         lib.DAQmx_Val_Unknown: 'Unknown category',
     }
 
-    @classmethod
-    def simulated(cls, name):
+    def __init__(self, name):
+        self.name = name
+
+    @property
+    def simulated(self):
         p = ffi.new('bool32 *')
-        res = lib.DAQmxGetDevIsSimulated(name, p)
+        res = lib.DAQmxGetDevIsSimulated(self.name, p)
         handle_error(res)
         return bool(p[0])
 
-    @classmethod
-    def product_category(cls, name): 
+    @property
+    def product_category(self): 
         p = ffi.new('int32 *')
-        res = lib.DAQmxGetDevProductCategory(name, p)
+        res = lib.DAQmxGetDevProductCategory(self.name, p)
         handle_error(res)
         return cls._category[p[0]]
 
-    @classmethod
-    def product_type(cls, name):
+
+    @property
+    def product_type(self):
         p = ffi.new('char[]', 256) 
-        res = lib.DAQmxGetDevProductType(name, p, 256)
+        res = lib.DAQmxGetDevProductType(self.name, p, 256)
+        handle_error(res)
+        return ffi.string(p)
+    
+
+    def product_number(self):
+        p = ffi.new('uInt32 *')
+        res = lib.DAQmxGetDevProductNum(self.name, p)
+        handle_error(res)
+        return p[0]
+
+
+    @property
+    def serial_number(self):
+        p = ffi.new('uInt32 *')
+        res = lib.DAQmxGetDevSerialNum(self.name, p)
+        handle_error(res)
+        return p[0]
+
+    @property
+    def analog_triggering_supported(self):
+        p = ffi.new('bool32 *')
+        res = lib.DAQmxGetDevAnlgTrigSupported(self.name, p)
+        handle_error(res)
+        return bool(p[0])
+    
+    @property
+    def digital_triggering_supported(self):
+        p = ffi.new('bool32 *')
+        res = lib.DAQmxGetDevDigTrigSupported(self.name, p)
+        handle_error(res)
+        return bool(p[0])
+
+    @property
+    def ai_channels(self):
+        p = ffi.new('char[]', 2048)
+        res = lib.DAQmxGetDevAIPhysicalChans(self.name, p, 2048);
         handle_error(res)
         return ffi.string(p)
 
-    @classmethod
-    def product_number(cls, name):
-        p = ffi.new('uInt32 *')
-        res = lib.DAQmxGetDevProductNum(name, p)
+
+    @property
+    def ai_single_chan_max_rate(self):
+        p = ffi.new('float64 *')
+        res = lib.DAQmxGetDevAIMaxSingleChanRate(self.name, p)
         handle_error(res)
         return p[0]
+
+    @property
+    def ai_multi_chan_max_rate(self):
+        p = ffi.new('float64 *')
+        res = lib.DAQmxGetDevAIMaxMultiChanRate(self.name, p)
+        handle_error(res)
+        return p[0]
+
+    @property
+    def ai_min_rate(self):
+        p = ffi.new('float64 *')
+        res = lib.DAQmxGetDevAIMinRate(self.name, p)
+        handle_error(res)
+        return p[0]
+
+    @property
+    def ai_simultaneous_sampling(self):
+        p = ffi.new('bool32 *')
+        res = lib.DAQmxGetDevAISimultaneousSamplingSupported(self.name, p)
+        handle_error(res)
+        return bool(p[0])
+
+    @property
+    def ai_triggers_supported(self):
+        p = ffi.new('int32 *')
+        res = lib.DAQmxGetDevAITrigUsage(self.name, p)
+        handle_error(res)
+        return p[0]
+
+    @property
+    def ai_voltage_ranges(self):
+        # TODO: Can be done with generator expressions
+        p = ffi.new('float64[]', 64)
+        res = lib.DAQmxGetDevAIVoltageRngs(self.name, p, 64)
+        handle_error(res)
+
+        ranges = []
+        for i in xrange(0, 64, 2): # iterate in pairs
+            if max(p[i], p[i+1]) > 0.001: # real range, not just zeros
+                ranges.append((p[i], p[i+1]))
+
+        return ranges
+
+
+    @property
+    def ai_gains(self):
+        # TODO: Can be done with generator expressions
+        p = ffi.new('float64[]', 64)
+        res = lib.DAQmxGetDevAIVoltageRngs(self.name, p, 64)
+        handle_error(res)
+
+        gains = []
+        for i in xrange(0, 64, 1):
+            if p[i] > 0.001: # real range, not just zeros
+                gains.append(p[i])
+
+        return gains
+
+    @property
+    def ai_couplings(self):
+        p = ffi.new('int32 *')
+        res = lib.DAQmxGetDevAICouplings(self.name, p);
+        handle_error(res)
+        return p[0]
+
+    
+    @property
+    def terminals(self):
+        p = ffi.new('char[]', 2048) 
+        res = lib.DAQmxGetDevTerminals(self.name, p, 2048)
+        handle_error(res)
+        return ffi.string(p)
+

@@ -1,5 +1,5 @@
 from .clib import (ffi, lib, handle_error)
-from .defs import SystemAttributes, Units
+from .defs import SystemAttributes, Units, SampleMode, ActiveEdge
 from bidict import bidict
 from itertools import ifilter
 
@@ -165,3 +165,26 @@ def add_input_voltage_channel(handle, pchannel, min, max, units=Units.Volts, nam
         handle_error(res)
     else:
     	raise TypeError('handle must be integer')
+
+def set_timing_sample_clock(handle, rate, n_samples, sample_mode=SampleMode.Finite, active_edge=ActiveEdge.Rising, \
+        source='OnboardClock'):
+    if isinstance(handle, (int, long)):
+        res = lib.DAQmxCfgSampClkTiming(handle, source, rate, active_edge, sample_mode, n_samples)
+        handle_error(res)
+    elif isinstance(handle, basestring):
+        h = task_map[handle]
+        res = lib.DAQmxCfgSampClkTiming(h, source, rate, active_edge, sample_mode, n_samples)
+        handle_error(res)
+    else:
+    	raise TypeError('handle must be integer or string')
+
+def set_timing_implicit(handle, n_samples, sample_mode=SampleMode.Finite):
+    if isinstance(handle, (int, long)):
+        res = lib.DAQmxCfgImplicitTiming(handle, sample_mode, n_samples)
+        handle_error(res)
+    elif isinstance(handle, basestring):
+        h = task_map[handle]
+        res = lib.DAQmxCfgImplicitTiming(h, sample_mode, n_samples)
+        handle_error(res)
+    else:
+    	raise TypeError('handle must be integer or string')
