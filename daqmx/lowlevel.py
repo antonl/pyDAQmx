@@ -1,8 +1,13 @@
 from .clib import (ffi, lib, handle_error)
 from .defs import SystemAttributes
+from bidict import bidict
+from itertools import ifilter
 
 __all__ = ['query_devices', 'query_tasks', 'query_version', 'make_task', 'clear_task', 
-    'control_task', 'query_task_is_done']
+    'control_task', 'query_task_is_done', 'uncommitted_tasks']
+
+'''holds mapping between created task and handle'''
+task_map = bidict()
 
 def query_devices():
     '''get devices that NIDAQmx knows about '''
@@ -32,6 +37,12 @@ def query_tasks():
     else:
         return []
 
+def uncommitted_tasks():
+    tmp = []
+    for i in ifilter(lambda x: x not in query_tasks(), task_map.keys()):
+        tmp.append(i)
+    return tmp
+
 def query_version():
     '''return version of the NIDAQmx library interface in use'''
 
@@ -44,6 +55,7 @@ def make_task(task_name):
         p = ffi.new('TaskHandle *')
         res = lib.DAQmxCreateTask(task_name, p)
         handle_error(res)
+        task_map.update({task_name: p[0]})
         return p[0]
     else:
     	raise TypeError('task_name must be a string')
@@ -54,6 +66,12 @@ def clear_task(handle):
 
     if isinstance(handle, (int, long)):
         res = lib.DAQmxClearTask(handle)
+        del task_map[:handle]
+        handle_error(res)
+    elif isinstance(handle, basestring):
+        h = task_map[handle]
+        res = lib.DAQmxClearTask(h)
+        del task_map[handle]
         handle_error(res)
     else:
     	raise TypeError('handle must be integer')
@@ -65,6 +83,10 @@ def start_task(handle):
     if isinstance(handle, (int, long)):
         res = lib.DAQmxStartTask(handle)
         handle_error(res)
+    elif isinstance(handle, basestring):
+        h = task_map[handle]
+        res = lib.DAQmxStartTask(h)
+        handle_error(res)
     else:
     	raise TypeError('handle must be integer')
 
@@ -73,6 +95,10 @@ def stop_task(handle):
     '''
     if isinstance(handle, (int, long)):
         res = lib.DAQmxStopTask(handle)
+        handle_error(res)
+    elif isinstance(handle, basestring):
+        h = task_map[handle]
+        res = lib.DAQmxStopTask(h)
         handle_error(res)
     else:
     	raise TypeError('handle must be integer')
@@ -85,6 +111,11 @@ def query_task_is_done(handle):
         res = lib.DAQmxIsTaskDone(handle, done_p)
         handle_error(res)
         return bool(done_p[0])
+    elif isinstance(handle, basestring):
+        h = task_map[handle]
+        done_p = ffi.new('bool32 *')
+        res = lib.DAQmxIsTaskDone(h, done_p)
+        handle_error(res)
     else:
     	raise TypeError('handle must be integer')
 
@@ -106,6 +137,10 @@ def control_task(handle, task_state):
 
     if isinstance(handle, (int, long)):
         res = lib.DAQmxTaskControl(handle, task_state)
+        handle_error(res)
+    elif isinstance(handle, basestring):
+        h = task_map[handle]
+        res = lib.DAQmxTaskControl(h, task_state)
         handle_error(res)
     else:
     	raise TypeError('handle must be integer')
