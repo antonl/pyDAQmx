@@ -1,13 +1,16 @@
 from .clib import (ffi, lib, handle_error)
-from .defs import SystemAttributes, Units, SampleMode, ActiveEdge
+from .defs import SystemAttributes, Units, SampleMode, ActiveEdge, EventType, SynchronousEventCallbacks
 from bidict import bidict
-from itertools import ifilter
+import weakref
 
 __all__ = ['query_devices', 'query_tasks', 'query_version', 'make_task', 'clear_task', 
-    'control_task', 'query_task_is_done', 'uncommitted_tasks']
+    'control_task', 'query_task_is_done', 'start_task', 'stop_task', 'reset_device']
 
 '''holds mapping between created task and handle'''
 task_map = bidict()
+
+'''holds callbacks registered'''
+callback_store = weakref.WeakKeyDictionary()
 
 def query_devices():
     '''get devices that NIDAQmx knows about '''
@@ -20,29 +23,18 @@ def query_devices():
     else:
         return []
 
-def query_tasks():
-    '''get tasks that are committed in the system 
+def reset_device(name):
+    '''aborts all tasks and resets device to initialized state
     
-    Querries the tasks attribute within the system. This function returns only
-    the verified and committed tasks, not those that have just been created,
-    so tasks that have been created but have no channels added to them do not
-    show up in this list.
+    Immediately aborts all tasks associated with a device and returns the device to an 
+    initialized state. Aborting a task stops and releases any resources the task reserved.
     '''
-    # TODO: eventually this should return Task classes
+    res = lib.DAQmxResetDevice(name)
+    handle_error(res)
 
-    tstr = SystemAttributes.get('tasks')
-    
-    if tstr is not None:
-        return [x for x in tstr.split(',')]
-    else:
-        return []
-
-def uncommitted_tasks():
+def query_tasks():
     '''get tasks that exist in the library but don't show up in the task list'''
-    tmp = []
-    for i in ifilter(lambda x: x not in query_tasks(), task_map.keys()):
-        tmp.append(i)
-    return tmp
+    return task_map.keys()
 
 def query_version():
     '''return version of the NIDAQmx library interface in use'''
@@ -188,3 +180,36 @@ def set_timing_implicit(handle, n_samples, sample_mode=SampleMode.Finite):
         handle_error(res)
     else:
     	raise TypeError('handle must be integer or string')
+
+def register_nsamples_callback(handle, nsamples, callback_function, callback_data=None, 
+        event_type=EventType.Acquired_Into_Buffer, options=0):
+
+    callback_store[callback_function] = ffi.callback('int32(TaskHandle, int32, uInt32, void*)', callback_function)
+    callback = callback_store[callback_function]
+
+    if callback_data is None: callback_data = ffi.NULL
+
+    if isinstance(handle, (int, long)):
+        res = lib.DAQmxRegisterEveryNSamplesEvent(handle, event_type, nsamples, options, callback, \
+            callback_data)
+        handle_error(res)
+    elif isinstance(handle, basestring):
+        h = task_map[handle]
+
+        res = lib.DAQmxRegisterEveryNSamplesEvent(h, event_type, nsamples, options, callback, \
+            callback_data)
+        handle_error(res)
+    else:
+    	raise TypeError('handle must be integer or string')
+
+def unregister_nsamples_callback(handle, event_type):
+    if isinstance(handle, (int, long)):
+        res = lib.DAQmxRegisterEveryNSamplesEvent(handle, event_type, 0, 0, ffi.NULL, ffi.NULL)
+        handle_error(res)
+    elif isinstance(handle, basestring):
+        h = task_map[handle]
+
+        res = lib.DAQmxRegisterEveryNSamplesEvent(h, event_type, 0, 0, ffi.NULL, ffi.NULL)
+        handle_error(res)
+
+

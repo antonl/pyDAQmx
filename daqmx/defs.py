@@ -33,14 +33,20 @@ class TerminalConfig:
     PseudoDiff = lib.DAQmx_Val_PseudoDiff
 
 Auto = lib.DAQmx_Val_Auto
-GroupByChannel = lib.DAQmx_Val_GroupByChannel 
-GroupByScanNumber = lib.DAQmx_Val_GroupByScanNumber
 WaitInfinitely = lib.DAQmx_Val_WaitInfinitely
+SynchronousEventCallbacks = lib.DAQmx_Val_SynchronousEventCallbacks
+
+class EventType:
+    Acquired_Into_Buffer = lib.DAQmx_Val_Acquired_Into_Buffer
+    Transferred_From_Buffer = lib.DAQmx_Val_Transferred_From_Buffer
+
+class SampleFormat:
+    GroupByChannel = lib.DAQmx_Val_GroupByChannel 
+    GroupByScanNumber = lib.DAQmx_Val_GroupByScanNumber
 
 class TaskState:
     '''task state enum class that contains values for passing to `control_task` function
     '''
-
     Start = lib.DAQmx_Val_Task_Start 
     Stop = lib.DAQmx_Val_Task_Stop 
     Verify = lib.DAQmx_Val_Task_Verify 
@@ -57,13 +63,13 @@ class SystemAttributes(object):
     '''
     
     int_attrs = ['major_version', 'minor_version']
-    str_attrs = ['devices', 'tasks', 'global_channels']
+    str_attrs = ['devices', 'saved_tasks', 'global_channels']
     
     attr_map = {
         'major_version':lib.DAQmx_Sys_NIDAQMajorVersion, 
         'minor_version':lib.DAQmx_Sys_NIDAQMinorVersion, 
         'devices':lib.DAQmx_Sys_DevNames,
-        'tasks':lib.DAQmx_Sys_Tasks,
+        'saved_tasks':lib.DAQmx_Sys_Tasks,
         'global_channels':lib.DAQmx_Sys_GlobalChans,
     }
 

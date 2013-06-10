@@ -62,8 +62,10 @@ int32 DAQmxGetErrorString (int32 errorCode, char errorString[], uInt32 bufferSiz
 int32 DAQmxGetExtendedErrorInfo (char errorString[], uInt32 bufferSize);
 '''
 
-# Device attributes
+# Device attributes and reset 
 header_str += '''
+int32 DAQmxResetDevice (const char deviceName[]);
+
 int32 DAQmxGetDevIsSimulated(const char device[], bool32 *data);
 
 int32 DAQmxGetDevProductCategory(const char device[], int32 *data);
@@ -229,6 +231,15 @@ int32 DAQmxCfgChangeDetectionTiming (TaskHandle taskHandle, const char risingEdg
 #define DAQmx_Val_FiniteSamps ... // Finite Samples
 #define DAQmx_Val_ContSamps ... // Continuous Samples
 #define DAQmx_Val_HWTimedSinglePoint ... // Hardware Timed Single Point
+'''
+
+# Callbacks
+header_str += '''
+int32 DAQmxRegisterEveryNSamplesEvent(TaskHandle taskHandle, int32 everyNsamplesEventType, uInt32 nSamples, uInt32 options, int32 (*)(TaskHandle, int32, uInt32, void *), void *callbackData);
+
+#define DAQmx_Val_SynchronousEventCallbacks ...
+#define DAQmx_Val_Acquired_Into_Buffer ...
+#define DAQmx_Val_Transferred_From_Buffer ...
 '''
 
 # Misc
