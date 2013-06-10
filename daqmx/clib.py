@@ -62,9 +62,106 @@ int32 DAQmxGetErrorString (int32 errorCode, char errorString[], uInt32 bufferSiz
 int32 DAQmxGetExtendedErrorInfo (char errorString[], uInt32 bufferSize);
 '''
 
-
-# Misc
+# Device attributes
 header_str += '''
+int32 DAQmxGetDevIsSimulated(const char device[], bool32 *data);
+
+int32 DAQmxGetDevProductCategory(const char device[], int32 *data);
+#define DAQmx_Val_MSeriesDAQ ... // M Series DAQ
+#define DAQmx_Val_ESeriesDAQ ... // E Series DAQ
+#define DAQmx_Val_SSeriesDAQ ... // S Series DAQ
+#define DAQmx_Val_BSeriesDAQ ... // B Series DAQ
+#define DAQmx_Val_SCSeriesDAQ ... // SC Series DAQ
+#define DAQmx_Val_USBDAQ ... // USB DAQ
+#define DAQmx_Val_AOSeries ... // AO Series
+#define DAQmx_Val_DigitalIO ... // Digital I/O
+#define DAQmx_Val_TIOSeries ... // TIO Series
+#define DAQmx_Val_DynamicSignalAcquisition ... // Dynamic Signal Acquisition
+#define DAQmx_Val_Switches ... // Switches
+#define DAQmx_Val_CompactDAQChassis ... // CompactDAQ Chassis
+#define DAQmx_Val_CSeriesModule ... // C Series Module
+#define DAQmx_Val_SCXIModule ... // SCXI Module
+#define DAQmx_Val_SCCConnectorBlock ... // SCC Connector Block
+#define DAQmx_Val_SCCModule ... // SCC Module
+#define DAQmx_Val_NIELVIS ... // NI ELVIS
+#define DAQmx_Val_NetworkDAQ ... // Network DAQ
+#define DAQmx_Val_Unknown ... // Unknown
+
+int32 DAQmxGetDevProductType(const char device[], char *data, uInt32 bufferSize);
+int32 DAQmxGetDevProductNum(const char device[], uInt32 *data);
+int32 DAQmxGetDevSerialNum(const char device[], uInt32 *data);
+
+int32 DAQmxGetCarrierSerialNum(const char device[], uInt32 *data);
+int32 DAQmxGetDevChassisModuleDevNames(const char device[], char *data, uInt32 bufferSize);
+int32 DAQmxGetDevAnlgTrigSupported(const char device[], bool32 *data);
+int32 DAQmxGetDevDigTrigSupported(const char device[], bool32 *data);
+int32 DAQmxGetDevAIPhysicalChans(const char device[], char *data, uInt32 bufferSize);
+int32 DAQmxGetDevAIMaxSingleChanRate(const char device[], float64 *data);
+int32 DAQmxGetDevAIMaxMultiChanRate(const char device[], float64 *data);
+int32 DAQmxGetDevAIMinRate(const char device[], float64 *data);
+int32 DAQmxGetDevAISimultaneousSamplingSupported(const char device[], bool32 *data);
+
+// Uses bits from enum TriggerUsageTypeBits
+int32 DAQmxGetDevAITrigUsage(const char device[], int32 *data);
+int32 DAQmxGetDevAIVoltageRngs(const char device[], float64 *data, uInt32 arraySizeInSamples);
+int32 DAQmxGetDevAIVoltageIntExcitDiscreteVals(const char device[], float64 *data, uInt32 arraySizeInSamples);
+int32 DAQmxGetDevAIVoltageIntExcitRangeVals(const char device[], float64 *data, uInt32 arraySizeInSamples);
+int32 DAQmxGetDevAICurrentRngs(const char device[], float64 *data, uInt32 arraySizeInSamples);
+int32 DAQmxGetDevAICurrentIntExcitDiscreteVals(const char device[], float64 *data, uInt32 arraySizeInSamples);
+int32 DAQmxGetDevAIFreqRngs(const char device[], float64 *data, uInt32 arraySizeInSamples);
+int32 DAQmxGetDevAIGains(const char device[], float64 *data, uInt32 arraySizeInSamples);
+// Uses bits from enum CouplingTypeBits
+int32 DAQmxGetDevAICouplings(const char device[], int32 *data);
+int32 DAQmxGetDevAILowpassCutoffFreqDiscreteVals(const char device[], float64 *data, uInt32 arraySizeInSamples);
+int32 DAQmxGetDevAILowpassCutoffFreqRangeVals(const char device[], float64 *data, uInt32 arraySizeInSamples);
+int32 DAQmxGetDevAOPhysicalChans(const char device[], char *data, uInt32 bufferSize);
+int32 DAQmxGetDevAOSampClkSupported(const char device[], bool32 *data);
+int32 DAQmxGetDevAOMaxRate(const char device[], float64 *data);
+int32 DAQmxGetDevAOMinRate(const char device[], float64 *data);
+// Uses bits from enum TriggerUsageTypeBits
+int32 DAQmxGetDevAOTrigUsage(const char device[], int32 *data);
+int32 DAQmxGetDevAOVoltageRngs(const char device[], float64 *data, uInt32 arraySizeInSamples);
+int32 DAQmxGetDevAOCurrentRngs(const char device[], float64 *data, uInt32 arraySizeInSamples);
+int32 DAQmxGetDevAOGains(const char device[], float64 *data, uInt32 arraySizeInSamples);
+int32 DAQmxGetDevDILines(const char device[], char *data, uInt32 bufferSize);
+int32 DAQmxGetDevDIPorts(const char device[], char *data, uInt32 bufferSize);
+int32 DAQmxGetDevDIMaxRate(const char device[], float64 *data);
+// Uses bits from enum TriggerUsageTypeBits
+int32 DAQmxGetDevDOLines(const char device[], char *data, uInt32 bufferSize);
+int32 DAQmxGetDevDOPorts(const char device[], char *data, uInt32 bufferSize);
+int32 DAQmxGetDevDOMaxRate(const char device[], float64 *data);
+// Uses bits from enum TriggerUsageTypeBits
+int32 DAQmxGetDevDOTrigUsage(const char device[], int32 *data);
+int32 DAQmxGetDevCIPhysicalChans(const char device[], char *data, uInt32 bufferSize);
+// Uses bits from enum TriggerUsageTypeBits
+int32 DAQmxGetDevCITrigUsage(const char device[], int32 *data);
+int32 DAQmxGetDevCISampClkSupported(const char device[], bool32 *data);
+int32 DAQmxGetDevCIMaxSize(const char device[], uInt32 *data);
+int32 DAQmxGetDevCIMaxTimebase(const char device[], float64 *data);
+int32 DAQmxGetDevCOPhysicalChans(const char device[], char *data, uInt32 bufferSize);
+// Uses bits from enum TriggerUsageTypeBits
+int32 DAQmxGetDevCOTrigUsage(const char device[], int32 *data);
+int32 DAQmxGetDevCOMaxSize(const char device[], uInt32 *data);
+int32 DAQmxGetDevCOMaxTimebase(const char device[], float64 *data);
+int32 DAQmxGetDevNumDMAChans(const char device[], uInt32 *data);
+// Uses value set BusType
+int32 DAQmxGetDevBusType(const char device[], int32 *data);
+int32 DAQmxGetDevPCIBusNum(const char device[], uInt32 *data);
+int32 DAQmxGetDevPCIDevNum(const char device[], uInt32 *data);
+int32 DAQmxGetDevPXIChassisNum(const char device[], uInt32 *data);
+int32 DAQmxGetDevPXISlotNum(const char device[], uInt32 *data);
+int32 DAQmxGetDevCompactDAQChassisDevName(const char device[], char *data, uInt32 bufferSize);
+int32 DAQmxGetDevCompactDAQSlotNum(const char device[], uInt32 *data);
+int32 DAQmxGetDevTCPIPHostname(const char device[], char *data, uInt32 bufferSize);
+int32 DAQmxGetDevTCPIPEthernetIP(const char device[], char *data, uInt32 bufferSize);
+int32 DAQmxGetDevTCPIPWirelessIP(const char device[], char *data, uInt32 bufferSize);
+int32 DAQmxGetDevTerminals(const char device[], char *data, uInt32 bufferSize);
+'''
+
+# Physical channel properties
+header_str += '''
+int32 DAQmxGetPhysicalChanAttribute (const char physicalChannel[], int32 attribute, void *value, ...);
+
 #define DAQmx_PhysicalChan_AI_TermCfgs	... // Indicates the list of terminal configurations supported by the channel.
 #define DAQmx_PhysicalChan_AO_TermCfgs	... // Indicates the list of terminal configurations supported by the channel.
 #define DAQmx_PhysicalChan_AO_ManualControlEnable ... // Specifies if you can control the physical channel externally via a manual control located on the device. You cannot simultaneously control a channel manually and with NI-DAQmx.
@@ -82,90 +179,33 @@ header_str += '''
 #define DAQmx_PhysicalChan_TEDS_VersionLetter ... // Indicates the version letter of the sensor.
 #define DAQmx_PhysicalChan_TEDS_BitStream ... // Indicates the TEDS binary bitstream without checksums.
 #define DAQmx_PhysicalChan_TEDS_TemplateIDs ... // Indicates the IDs of the templates in the bitstream in BitStream.
+'''
 
+# Units
+header_str += '''
+#define DAQmx_Val_Volts ... // Volts
+#define DAQmx_Val_FromCustomScale  ... // Units a custom scale specifies. Use customScaleName to specify a custom scale.
+#define DAQmx_Val_Amps ... // Amps
+'''
 
-int32 DAQmxGetDeviceAttribute (const char deviceName[], int32 attribute, void *value, ...);
+# Terminal Config
+header_str += '''
+#define DAQmx_Val_Cfg_Default ... // Default
+#define DAQmx_Val_RSE ... // Referenced single ended
+#define DAQmx_Val_NRSE ... // Non-referenced single ended
+#define DAQmx_Val_Diff ... // Differential
+#define DAQmx_Val_PseudoDiff ... // Psuedo differential
+'''
 
-#define DAQmx_Dev_IsSimulated ... // Indicates if the device is a simulated device.
-#define DAQmx_Dev_ProductCategory ... // Indicates the product category of the device. This category corresponds to the category displayed in MAX when creating NI-DAQmx simulated devices.
-#define DAQmx_Dev_ProductType ... // Indicates the product name of the device.
-#define DAQmx_Dev_ProductNum ... // Indicates the unique hardware identification number for the device.
-#define DAQmx_Dev_SerialNum ... // Indicates the serial number of the device. This value is zero if the device does not have a serial number.
-#define DAQmx_Carrier_SerialNum ... // Indicates the serial number of the device carrier. This value is zero if the carrier does not have a serial number.
-#define DAQmx_Dev_Chassis_ModuleDevNames ... // Indicates an array containing the names of the modules in the chassis.
-#define DAQmx_Dev_AnlgTrigSupported ... // Indicates if the device supports analog triggering.
-#define DAQmx_Dev_DigTrigSupported ... // Indicates if the device supports digital triggering.
-#define DAQmx_Dev_AI_PhysicalChans ... // Indicates an array containing the names of the analog input physical channels available on the device.
-#define DAQmx_Dev_AI_MaxSingleChanRate ... // Indicates the maximum rate for an analog input task if the task contains only a single channel from this device.
-#define DAQmx_Dev_AI_MaxMultiChanRate ... // Indicates the maximum rate for an analog input task if the task contains multiple channels from this device. For multiplexed devices, divide this rate by the number of channels to determine the maximum sampling rate.
-#define DAQmx_Dev_AI_MinRate ... // Indicates the minimum rate for an analog input task on this device. NI-DAQmx returns a warning or error if you attempt to sample at a slower rate.
-#define DAQmx_Dev_AI_SimultaneousSamplingSupported ... // Indicates if the device supports simultaneous sampling.
-#define DAQmx_Dev_AI_TrigUsage ... // Indicates the triggers supported by this device for an analog input task.
-#define DAQmx_Dev_AI_VoltageRngs ... // Indicates pairs of input voltage ranges supported by this device. Each pair consists of the low value, followed by the high value.
-#define DAQmx_Dev_AI_VoltageIntExcitDiscreteVals ... // Indicates the set of discrete internal voltage excitation values supported by this device. If the device supports ranges of internal excitation values, use Range Values to determine supported excitation values.
-#define DAQmx_Dev_AI_VoltageIntExcitRangeVals ... // Indicates pairs of internal voltage excitation ranges supported by this device. Each pair consists of the low value, followed by the high value. If the device supports a set of discrete internal excitation values, use Discrete Values to determine the supported excitation values.
-#define DAQmx_Dev_AI_CurrentRngs ... // Indicates the pairs of current input ranges supported by this device. Each pair consists of the low value, followed by the high value.
-#define DAQmx_Dev_AI_CurrentIntExcitDiscreteVals ... // Indicates the set of discrete internal current excitation values supported by this device.
-#define DAQmx_Dev_AI_FreqRngs ... // Indicates the pairs of frequency input ranges supported by this device. Each pair consists of the low value, followed by the high value.
-#define DAQmx_Dev_AI_Gains ... // Indicates the input gain settings supported by this device.
-#define DAQmx_Dev_AI_Couplings ... // Indicates the coupling types supported by this device.
-#define DAQmx_Dev_AI_LowpassCutoffFreqDiscreteVals ... // Indicates the set of discrete lowpass cutoff frequencies supported by this device. If the device supports ranges of lowpass cutoff frequencies, use Range Values to determine supported frequencies.
-#define DAQmx_Dev_AI_LowpassCutoffFreqRangeVals ... // Indicates pairs of lowpass cutoff frequency ranges supported by this device. Each pair consists of the low value, followed by the high value. If the device supports a set of discrete lowpass cutoff frequencies, use Discrete Values to determine the supported  frequencies.
-#define DAQmx_Dev_AO_PhysicalChans ... // Indicates an array containing the names of the analog output physical channels available on the device.
-#define DAQmx_Dev_AO_SampClkSupported ... // Indicates if the device supports the sample clock timing  type for analog output tasks.
-#define DAQmx_Dev_AO_MaxRate ... // Indicates the maximum analog output rate of the device.
-#define DAQmx_Dev_AO_MinRate ... // Indicates the minimum analog output rate of the device.
-#define DAQmx_Dev_AO_TrigUsage ... // Indicates the triggers supported by this device for analog output tasks.
-#define DAQmx_Dev_AO_VoltageRngs ... // Indicates pairs of output voltage ranges supported by this device. Each pair consists of the low value, followed by the high value.
-#define DAQmx_Dev_AO_CurrentRngs ... // Indicates pairs of output current ranges supported by this device. Each pair consists of the low value, followed by the high value.
-#define DAQmx_Dev_AO_Gains ... // Indicates the output gain settings supported by this device.
-#define DAQmx_Dev_DI_Lines ... // Indicates an array containing the names of the digital input lines available on the device.
-#define DAQmx_Dev_DI_Ports ... // Indicates an array containing the names of the digital input ports available on the device.
-#define DAQmx_Dev_DI_MaxRate ... // Indicates the maximum digital input rate of the device.
-#define DAQmx_Dev_DI_TrigUsage ... // Indicates the triggers supported by this device for digital input tasks.
-#define DAQmx_Dev_DO_Lines ... // Indicates an array containing the names of the digital output lines available on the device.
-#define DAQmx_Dev_DO_Ports ... // Indicates an array containing the names of the digital output ports available on the device.
-#define DAQmx_Dev_DO_MaxRate ... // Indicates the maximum digital output rate of the device.
-#define DAQmx_Dev_DO_TrigUsage ... // Indicates the triggers supported by this device for digital output tasks.
-#define DAQmx_Dev_CI_PhysicalChans ... // Indicates an array containing the names of the counter input physical channels available on the device.
-#define DAQmx_Dev_CI_TrigUsage ... // Indicates the triggers supported by this device for counter input tasks.
-#define DAQmx_Dev_CI_SampClkSupported ... // Indicates if the device supports the sample clock timing type for counter input tasks.
-#define DAQmx_Dev_CI_MaxSize ... // Indicates in bits the size of the counters on the device.
-#define DAQmx_Dev_CI_MaxTimebase ... // Indicates in hertz the maximum counter timebase frequency.
-#define DAQmx_Dev_CO_PhysicalChans ... // Indicates an array containing the names of the counter output physical channels available on the device.
-#define DAQmx_Dev_CO_TrigUsage ... // Indicates the triggers supported by this device for counter output tasks.
-#define DAQmx_Dev_CO_MaxSize ... // Indicates in bits the size of the counters on the device.
-#define DAQmx_Dev_CO_MaxTimebase ... // Indicates in hertz the maximum counter timebase frequency.
-#define DAQmx_Dev_NumDMAChans ... // Indicates the number of DMA channels on the device.
-#define DAQmx_Dev_BusType ... // Indicates the bus type of the device.
-#define DAQmx_Dev_PCI_BusNum ... // Indicates the PCI bus number of the device.
-#define DAQmx_Dev_PCI_DevNum ... // Indicates the PCI slot number of the device.
-#define DAQmx_Dev_PXI_ChassisNum ... // Indicates the PXI chassis number of the device, as identified in MAX.
-#define DAQmx_Dev_PXI_SlotNum ... // Indicates the PXI slot number of the device.
-#define DAQmx_Dev_CompactDAQ_ChassisDevName ... // Indicates the name of the CompactDAQ chassis that contains this module.
-#define DAQmx_Dev_CompactDAQ_SlotNum ... // Indicates the slot number in which this module is located in the CompactDAQ chassis.
-#define DAQmx_Dev_TCPIP_Hostname ... // Indicates the IPv4 hostname of the device.
-#define DAQmx_Dev_TCPIP_EthernetIP ... // Indicates the IPv4 address of the Ethernet interface. This property returns an empty string if the Ethernet interface cannot acquire an address.
-#define DAQmx_Dev_TCPIP_WirelessIP ... // Indicates the IPv4 address of the wireless interface.This property returns an empty string if the wireless interface cannot acquire an address.
-#define DAQmx_Dev_Terminals ... // Indicates a list of all terminals on the device.
-
-
-int32 DAQmxGetPhysicalChanAttribute (const char physicalChannel[], int32 attribute, void *value, ...);
+# Misc
+header_str += '''
 int32 DAQmxGetChanAttribute (TaskHandle taskHandle, const char channel[], int32 attribute, void *value, ...);
 
 int32 DAQmxCreateAIVoltageChan (TaskHandle taskHandle, const char physicalChannel[], const char nameToAssignToChannel[], int32 terminalConfig, float64 minVal, float64 maxVal, int32 units, const char customScaleName[]);
 
-#define DAQmx_Val_Cfg_Default ... // Default
-
-#define DAQmx_Val_Volts ... // Volts
-#define DAQmx_Val_FromCustomScale  ... // Units a custom scale specifies. Use customScaleName to specify a custom scale.
-
-
-
 //*** Value set Edge1 ***
 #define DAQmx_Val_Rising ... // Rising
 #define DAQmx_Val_Falling ... // Falling
-
 
 #define DAQmx_Val_FiniteSamps ... // Finite Samples
 #define DAQmx_Val_ContSamps ... // Continuous Samples

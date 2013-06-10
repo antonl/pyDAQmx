@@ -1,19 +1,27 @@
 from .clib import lib, ffi, handle_error
 
-__all__ = ['TaskState', 'SystemAttributes', 'TaskAttributes']
+__all__ = ['TaskState', 'SystemAttributes', 'TaskAttributes', 'TerminalConfig', 'Units']
 
-class ChannelUnits:
+class Units:
     Volts = lib.DAQmx_Val_Volts
+    Amps = lib.DAQmx_Val_Amps
     FromCustomScale = lib.DAQmx_Val_FromCustomScale 
 
 class TriggerType:
     RisingEdge = lib.DAQmx_Val_Rising
     FallingEdge = lib.DAQmx_Val_Falling
 
-class SampleType:
+class Sampling:
     FiniteSamples = lib.DAQmx_Val_FiniteSamps
     ContinuousSamples = lib.DAQmx_Val_ContSamps
     HWTimedSinglePoint = lib.DAQmx_Val_HWTimedSinglePoint
+
+class TerminalConfig:
+    Default = lib.DAQmx_Val_Cfg_Default
+    RSE = lib.DAQmx_Val_RSE
+    NRSE = lib.DAQmx_Val_NRSE
+    Diff = lib.DAQmx_Val_Diff
+    PseudoDiff = lib.DAQmx_Val_PseudoDiff
 
 Auto = lib.DAQmx_Val_Auto
 GroupByChannel = lib.DAQmx_Val_GroupByChannel 
@@ -148,13 +156,52 @@ class TaskAttributes(object):
         else:
             raise AttributeError('no task attribute {}'.format(attr))
 
-'''
 class DeviceAttributes(object):
-    def __getattr__(self, name, attr):
-        if not isinstance(attr, basestring):
-        	raise TypeError('attr must be a string')
+    _category = { \
+        lib.DAQmx_Val_MSeriesDAQ: 'M Series DAQ',
+        lib.DAQmx_Val_ESeriesDAQ: 'E Series DAQ',
+        lib.DAQmx_Val_SSeriesDAQ: 'S Series DAQ',
+        lib.DAQmx_Val_BSeriesDAQ: 'B Series DAQ',
+        lib.DAQmx_Val_SCSeriesDAQ: 'SC Series DAQ',
+        lib.DAQmx_Val_USBDAQ: 'USB DAQ',
+        lib.DAQmx_Val_AOSeries: 'AO Series',
+        lib.DAQmx_Val_DigitalIO: 'Digital I/O',
+        lib.DAQmx_Val_TIOSeries: 'TIO Series',
+        lib.DAQmx_Val_DynamicSignalAcquisition: 'Dynamic Signal Acquisition',
+        lib.DAQmx_Val_Switches: 'Switches',
+        lib.DAQmx_Val_CompactDAQChassis: 'CompactDAQ Chassis',
+        lib.DAQmx_Val_CSeriesModule: 'C Series I/O module',
+        lib.DAQmx_Val_SCXIModule: 'SCXI Module',
+        lib.DAQmx_Val_SCCConnectorBlock: 'SCC Connector Block',
+        lib.DAQmx_Val_NIELVIS: 'NI ELVIS',
+        lib.DAQmx_Val_NetworkDAQ: 'Network DAQ',
+        lib.DAQmx_Val_Unknown: 'Unknown category',
+    }
 
-        if attr == 'is_simulated':
-            value = ffi.new('bool32 *', 0)
-           
-'''
+    @classmethod
+    def simulated(cls, name):
+        p = ffi.new('bool32 *')
+        res = lib.DAQmxGetDevIsSimulated(name, p)
+        handle_error(res)
+        return bool(p[0])
+
+    @classmethod
+    def product_category(cls, name): 
+        p = ffi.new('int32 *')
+        res = lib.DAQmxGetDevProductCategory(name, p)
+        handle_error(res)
+        return cls._category[p[0]]
+
+    @classmethod
+    def product_type(cls, name):
+        p = ffi.new('char[]', 256) 
+        res = lib.DAQmxGetDevProductType(name, p, 256)
+        handle_error(res)
+        return ffi.string(p)
+
+    @classmethod
+    def product_number(cls, name):
+        p = ffi.new('uInt32 *')
+        res = lib.DAQmxGetDevProductNum(name, p)
+        handle_error(res)
+        return p[0]

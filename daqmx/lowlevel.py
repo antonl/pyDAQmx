@@ -1,5 +1,5 @@
 from .clib import (ffi, lib, handle_error)
-from .defs import SystemAttributes
+from .defs import SystemAttributes, Units
 from bidict import bidict
 from itertools import ifilter
 
@@ -38,6 +38,7 @@ def query_tasks():
         return []
 
 def uncommitted_tasks():
+    '''get tasks that exist in the library but don't show up in the task list'''
     tmp = []
     for i in ifilter(lambda x: x not in query_tasks(), task_map.keys()):
         tmp.append(i)
@@ -147,3 +148,20 @@ def control_task(handle, task_state):
 
 def load_task(name):
     raise NotImplementedError('loading a task from MAX is not implemented yet')
+
+def add_input_voltage_channel(handle, pchannel, min, max, units=Units.Volts, name=None, term_config=None, custom_scale=None):
+    '''adds an analog input channel to a task given by the handle
+
+    '''
+    if name is None: name = ffi.NULL
+    if units is not Units.FromCustomScale: custom_scale = ffi.NULL 
+
+    if isinstance(handle, (int, long)):
+        res = lib.DAQmxCreateAIVoltageChan(handle, pchannel, name, term_config, min, max, units, custom_scale)
+        handle_error(res)
+    elif isinstance(handle, basestring):
+        h = task_map[handle]
+        res = lib.DAQmxCreateAIVoltageChan(h, pchannel, name, term_config, min, max, units, custom_scale)
+        handle_error(res)
+    else:
+    	raise TypeError('handle must be integer')
