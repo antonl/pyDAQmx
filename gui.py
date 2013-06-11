@@ -9,7 +9,7 @@ import logging
 log = logging.getLogger('scope')
 dlog = logging.getLogger('daqmx')
 
-f = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+f = logging.Formatter('%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s')
 sh = logging.StreamHandler()
 sh.setFormatter(f)
 log.addHandler(sh)
@@ -17,7 +17,7 @@ dlog.addHandler(sh)
 log.setLevel(logging.DEBUG)
 dlog.setLevel(logging.DEBUG)
 
-class TwoChanScope(threading.Thread):
+class TwoChanScope(object):
     def __init__(self):
         self.h = d.make_task('scope')
         log.debug('Making TwoChanScope, handle %d', self.h)
@@ -32,7 +32,6 @@ class TwoChanScope(threading.Thread):
 
         self.running = threading.Event()
         self.data = deque()
-        threading.Thread.__init__(self)
         
     def _callback(self, h, t, nsamples, data):
         log.debug('in callback')
@@ -40,26 +39,12 @@ class TwoChanScope(threading.Thread):
         data = numpy.frombuffer(data[:count], dtype='<f2')
         self.data.append(data.reshape(2, -1))
         return 0
-    
-    def run(self):
-        try:
-            d.start_task(self.h)
-            self.running.set()
-        except RuntimeError as e:
-            log.error(e)
 
-        log.debug('running is %s', str(self.running.is_set()))
+    def start(self):
+        d.start_task(self.h)
 
-        while self.running.is_set():
-            try:
-                self.data.pop()
-                log.info('got data')
-            except IndexError:
-                pass
-
-    def join(self):
+    def stop(self):
         d.stop_task(self.h)
-        self.running.clear()
         d.clear_task(self.h)
 
 worker = TwoChanScope()
@@ -71,5 +56,5 @@ try:
     while True:
     	pass
 except KeyboardInterrupt:
-    worker.join()
+    worker.stop()
 
