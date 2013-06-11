@@ -244,30 +244,31 @@ def set_output_buffer_size(handle, size):
         res = lib.DAQmxCfgOutputBuffer(h, size)
         handle_error(res)
 
-def read_f64(handle, count, n_samps_per_channel=Read.All, timeout=0., fill_mode=FillMode.GroupByScanNumber):
-    data = ffi.new('float64[]', count)
+def read_f64(handle, buf_size, n_samps_per_channel=Read.All, timeout=0., fill_mode=FillMode.GroupByScanNumber):
+    data = ffi.new('float64[]', buf_size)
     nsamp = ffi.new('int32 *')
 
     if isinstance(handle, (int, long)):
         res = lib.DAQmxReadAnalogF64(handle, n_samps_per_channel, timeout, fill_mode, \
-                data, count, nsamp, ffi.NULL)
+                data, buf_size, nsamp, ffi.NULL)
         try:
             handle_error(res)
         except RuntimeWarning as e:
-            print e
+            log.warning(e)
         finally:
+            log.debug('count is %d', nsamp[0])
             return (ffi.buffer(data), nsamp[0])
 
     elif isinstance(handle, basestring):
         h = task_map[handle]
 
         res = lib.DAQmxReadAnalogF64(h, n_samps_per_channel, timeout, fill_mode, \
-                data, count, nsamp, ffi.NULL)
+                data, buf_size, nsamp, ffi.NULL)
         try:
             handle_error(res)
         except RuntimeWarning as e:
-            print e
-            #logging.warning(e)
+            log.warning(e)
         finally:
+            log.debug('count is %d', nsamp[0])
             return (ffi.buffer(data), nsamp[0])
 
