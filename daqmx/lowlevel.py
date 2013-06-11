@@ -109,6 +109,7 @@ def query_task_is_done(handle):
         done_p = ffi.new('bool32 *')
         res = lib.DAQmxIsTaskDone(h, done_p)
         handle_error(res)
+        return bool(done_p[0])
     else:
     	raise TypeError('handle must be integer')
 
