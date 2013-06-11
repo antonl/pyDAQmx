@@ -242,26 +242,30 @@ int32 DAQmxRegisterEveryNSamplesEvent(TaskHandle taskHandle, int32 everyNsamples
 #define DAQmx_Val_Transferred_From_Buffer ...
 '''
 
-# Misc
+# Buffer configuration
 header_str += '''
-int32 DAQmxGetChanAttribute (TaskHandle taskHandle, const char channel[], int32 attribute, void *value, ...);
+int32 DAQmxCfgInputBuffer (TaskHandle taskHandle, uInt32 numSampsPerChan);
+int32 DAQmxCfgOutputBuffer (TaskHandle taskHandle, uInt32 numSampsPerChan);
+'''
 
+# Create channels
+header_str += '''
 int32 DAQmxCreateAIVoltageChan (TaskHandle taskHandle, const char physicalChannel[], const char nameToAssignToChannel[], int32 terminalConfig, float64 minVal, float64 maxVal, int32 units, const char customScaleName[]);
+'''
 
+# Reading data and configuration options
+header_str += '''
 int32 DAQmxReadAnalogF64 (TaskHandle taskHandle, int32 numSampsPerChan, float64 timeout, bool32 fillMode, float64 readArray[], uInt32 arraySizeInSamps, int32 *sampsPerChanRead, bool32 *reserved);
 
 #define DAQmx_Val_WaitInfinitely ...
-
-//*** Value for the Number of Samples per Channel parameter of DAQmxReadAnalogF64, DAQmxReadBinaryI16, DAQmxReadBinaryU16,
-//    DAQmxReadBinaryI32, DAQmxReadBinaryU32, DAQmxReadDigitalU8, DAQmxReadDigitalU32,
-//    DAQmxReadDigitalLines, DAQmxReadCounterF64, DAQmxReadCounterU32 and DAQmxReadRaw ***
 #define DAQmx_Val_Auto ...
-
-//*** Values for the Fill Mode parameter of DAQmxReadAnalogF64, DAQmxReadBinaryI16, DAQmxReadBinaryU16, DAQmxReadBinaryI32, DAQmxReadBinaryU32,
-//    DAQmxReadDigitalU8, DAQmxReadDigitalU32, DAQmxReadDigitalLines ***
-//*** Values for the Data Layout parameter of DAQmxWriteAnalogF64, DAQmxWriteBinaryI16, DAQmxWriteDigitalU8, DAQmxWriteDigitalU32, DAQmxWriteDigitalLines ***
 #define DAQmx_Val_GroupByChannel ... // Group by Channel
 #define DAQmx_Val_GroupByScanNumber ... // Group by Scan Number
+'''
+
+# Misc
+header_str += '''
+int32 DAQmxGetChanAttribute (TaskHandle taskHandle, const char channel[], int32 attribute, void *value, ...);
 '''
 
 ffi = FFI()

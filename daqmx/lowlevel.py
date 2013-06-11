@@ -1,11 +1,15 @@
 from .clib import (ffi, lib, handle_error)
 from .defs import SystemAttributes, Units, SampleMode, ActiveEdge, \
-    EventType, SynchronousEventCallbacks, FillMode, Read
+    EventType, SynchronousEventCallbacks, FillMode, Read, TerminalConfig
 from bidict import bidict
 import weakref
+import logging
+
+log = logging.getLogger('daqmx')
 
 __all__ = ['query_devices', 'query_tasks', 'query_version', 'make_task', 'clear_task', 
-    'control_task', 'query_task_is_done', 'start_task', 'stop_task', 'reset_device']
+    'control_task', 'query_task_is_done', 'start_task', 'stop_task', 'reset_device', 
+    'read_f64']
 
 '''holds mapping between created task and handle'''
 task_map = bidict()
@@ -143,12 +147,20 @@ def control_task(handle, task_state):
 def load_task(name):
     raise NotImplementedError('loading a task from MAX is not implemented yet')
 
-def add_input_voltage_channel(handle, pchannel, min, max, units=Units.Volts, name=None, term_config=None, custom_scale=None):
+def add_input_voltage_channel(handle, pchannel, min, max, units=Units.Volts, name=None, \
+        term_config=TerminalConfig.Default, custom_scale=None):
     '''adds an analog input channel to a task given by the handle
 
     '''
     if name is None: name = ffi.NULL
     if units is not Units.FromCustomScale: custom_scale = ffi.NULL 
+    
+    log.info('adding voltage channel %s', str(pchannel))
+
+    if units == Units.Volts: ustr = 'Units.Volts'
+
+    log.debug('calling with f(%s, %s, %f, %f, %s, %s, %s, %s',
+            handle, pchannel, min, max, units, name, str(term_config), str(custom_scale))
 
     if isinstance(handle, (int, long)):
         res = lib.DAQmxCreateAIVoltageChan(handle, pchannel, name, term_config, min, max, units, custom_scale)
@@ -158,7 +170,7 @@ def add_input_voltage_channel(handle, pchannel, min, max, units=Units.Volts, nam
         res = lib.DAQmxCreateAIVoltageChan(h, pchannel, name, term_config, min, max, units, custom_scale)
         handle_error(res)
     else:
-    	raise TypeError('handle must be integer')
+    	raise TypeError('handle must be integer or string')
 
 def set_timing_sample_clock(handle, rate, n_samples, sample_mode=SampleMode.Finite, active_edge=ActiveEdge.Rising, \
         source='OnboardClock'):
@@ -212,6 +224,24 @@ def unregister_nsamples_callback(handle, event_type):
         h = task_map[handle]
 
         res = lib.DAQmxRegisterEveryNSamplesEvent(h, event_type, 0, 0, ffi.NULL, ffi.NULL)
+        handle_error(res)
+
+def set_input_buffer_size(handle, size):
+    if isinstance(handle, (int, long)):
+        res = lib.DAQmxCfgInputBuffer(handle, size)
+        handle_error(res)
+    elif isinstance(handle, basestring):
+        h = task_map[handle]
+        res = lib.DAQmxCfgInputBuffer(h, size)
+        handle_error(res)
+
+def set_output_buffer_size(handle, size):
+    if isinstance(handle, (int, long)):
+        res = lib.DAQmxCfgOutputBuffer(handle, size)
+        handle_error(res)
+    elif isinstance(handle, basestring):
+        h = task_map[handle]
+        res = lib.DAQmxCfgOutputBuffer(h, size)
         handle_error(res)
 
 def read_f64(handle, count, n_samps_per_channel=Read.All, timeout=0., fill_mode=FillMode.GroupByScanNumber):
