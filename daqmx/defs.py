@@ -1,12 +1,16 @@
 from .clib import lib, ffi, handle_error
 
 __all__ = ['TaskState', 'SystemAttributes', 'TaskAttributes', 'TerminalConfig', 'SampleMode', \
-    'Units', 'AnalogInputCouplings']
+    'Units', 'AnalogInputCouplings', 'FillMode']
 
 class Units:
     Volts = lib.DAQmx_Val_Volts
     Amps = lib.DAQmx_Val_Amps
     FromCustomScale = lib.DAQmx_Val_FromCustomScale 
+
+class FillMode:
+    GroupByChannel = lib.DAQmx_Val_GroupByChannel
+    GroupByScanNumber = lib.DAQmx_Val_GroupByScanNumber
 
 class AnalogInputCouplings:
     AC = lib.DAQmx_Val_Bit_CouplingTypes_AC
@@ -32,8 +36,10 @@ class TerminalConfig:
     Diff = lib.DAQmx_Val_Diff
     PseudoDiff = lib.DAQmx_Val_PseudoDiff
 
-Auto = lib.DAQmx_Val_Auto
-WaitInfinitely = lib.DAQmx_Val_WaitInfinitely
+class Read:
+    All = lib.DAQmx_Val_Auto
+    WaitInfinitely = lib.DAQmx_Val_WaitInfinitely
+
 SynchronousEventCallbacks = lib.DAQmx_Val_SynchronousEventCallbacks
 
 class EventType:
