@@ -58,7 +58,12 @@ class ScopeUI(QMainWindow, Ui_MainWindow):
         self.qGainBox.setValue(1.0)
 
         self.scope_timer = QTimer()
+        self.scope_timer.setInterval(25)
         self.scope_timer.timeout.connect(self.update_plots)
+
+        self.data_timer = QTimer()
+        self.data_timer.setInterval(1)
+        self.data_timer.timeout.connect(self.worker.get_data)
 
         self.is_paused = False
 
@@ -67,12 +72,14 @@ class ScopeUI(QMainWindow, Ui_MainWindow):
         	log.debug('was paused, starting')
         	self.startButton.setText('Pause')
         	self.is_paused = not self.is_paused
+        	self.data_timer.start()
         	self.worker.start()
         else:
         	log.debug('was running, pausing')
         	self.startButton.setText('Run')
         	self.is_paused = not self.is_paused
         	self.worker.stop()
+        	self.data_timer.stop()
 
     def q_offset_changed(self):
         self._q_val = float(self.qOffsetBox.value())/100
@@ -110,7 +117,7 @@ class ScopeUI(QMainWindow, Ui_MainWindow):
 
     def update_plots(self):
         try:
-            navg = 4 
+            navg = 1 
             if len(self.worker.data) >= navg:
                 block1 = self.worker.data.popleft()
                 nsamp = block1.shape[0]
@@ -140,8 +147,9 @@ class ScopeUI(QMainWindow, Ui_MainWindow):
         self.worker.clear()
 
     def show(self):
+        self.scope_timer.start()
+        self.data_timer.start()
         self.worker.start()
-        self.scope_timer.start(25)
 
         super(QMainWindow, self).show()
         
@@ -156,20 +164,17 @@ class TwoChanScope(object):
         d.add_input_voltage_channel(self.h, 'Dev1/ai0', 0, 0.5, units=daqmx.Units.Volts, name='I')
         d.add_input_voltage_channel(self.h, 'Dev1/ai1', 0, 0.5, units=daqmx.Units.Volts, name='Q')
         
-        d.set_timing_sample_clock(self.h, 2<<18, 2<<15, sample_mode=d.SampleMode.Continuous)
-
-        d.set_input_buffer_size(self.h, 2<<15)
-        d.register_nsamples_callback(self.h, 2<<15, self._callback)
-
+        d.set_timing_sample_clock(self.h, 2<<16, 2<<16, sample_mode=d.SampleMode.Continuous)
+        #d.set_input_buffer_size(self.h, 2<<15)
         self.data = deque()
         
-    def _callback(self, h, t, nsamples, unused):
+    def get_data(self):
+        nsamples = 2<<15
         log.debug('in callback, nsamples: %d, reading %d samples per channel', nsamples, nsamples>>1)
-        data, count = d.read_f64(h, nsamples<<1, n_samps_per_channel=nsamples>>1)
+        data, count = d.read_f64(self.h, nsamples, n_samps_per_channel=nsamples>>1, timeout=0.2)
         log.debug('got count: %d, data %s', count, str(data))
-        data = numpy.frombuffer(data, dtype=numpy.float64, count=nsamples)
+        data = numpy.frombuffer(data, dtype=numpy.float64, count=count<<1)
         self.data.append(data.reshape(count, 2))
-        return 0
 
     def start(self):
         d.start_task(self.h)
