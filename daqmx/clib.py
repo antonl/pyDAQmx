@@ -256,6 +256,7 @@ int32 DAQmxCreateAIVoltageChan (TaskHandle taskHandle, const char physicalChanne
 # Reading data and configuration options
 header_str += '''
 int32 DAQmxReadAnalogF64 (TaskHandle taskHandle, int32 numSampsPerChan, float64 timeout, bool32 fillMode, float64 readArray[], uInt32 arraySizeInSamps, int32 *sampsPerChanRead, bool32 *reserved);
+int32 DAQmxReadRaw (TaskHandle taskHandle, int32 numSampsPerChan, float64 timeout, void *readArray, uInt32 arraySizeInBytes, int32 *sampsRead, int32 *numBytesPerSamp, bool32 *reserved);
 
 #define DAQmx_Val_WaitInfinitely ...
 #define DAQmx_Val_Auto ...
